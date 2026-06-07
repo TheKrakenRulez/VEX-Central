@@ -35,11 +35,25 @@ function saveStoredProfile(uid, profile) {
   return profileToSave;
 }
 
+function requireAuth() {
+  if (!auth) {
+    throw new Error("Firebase environment variables are missing.");
+  }
+
+  return auth;
+}
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(undefined); // undefined = loading, null = signed out
   const [profile, setProfile] = useState(undefined); // undefined = loading, null = needs onboarding
 
   useEffect(() => {
+    if (!auth) {
+      setUser(null);
+      setProfile(null);
+      return undefined;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
       setUser(firebaseUser ?? null);
       setProfile(firebaseUser ? loadStoredProfile(firebaseUser.uid) : null);
@@ -47,9 +61,9 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  const signInWithGoogle = () => signInWithPopup(auth, googleProvider);
-  const signUpWithGoogle = () => signInWithPopup(auth, googleProvider);
-  const logout = () => signOut(auth);
+  const signInWithGoogle = () => signInWithPopup(requireAuth(), googleProvider);
+  const signUpWithGoogle = () => signInWithPopup(requireAuth(), googleProvider);
+  const logout = () => signOut(requireAuth());
   const saveProfile = (profileData) => {
     if (!user) {
       throw new Error("You must be signed in to save your profile.");
