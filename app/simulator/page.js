@@ -1,5 +1,8 @@
 "use client";
 import { useState, useEffect, useRef } from "react";
+import { useAuth } from "@/context/AuthContext";
+import { collection, addDoc, getDocs, query, where, serverTimestamp, deleteDoc, updateDoc, doc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function Home() {
   const canvasRef = useRef(null);
@@ -168,7 +171,112 @@ export default function Home() {
   ];
 
   // --- STATE SYSTEM ---
+  const { user } = useAuth();
+  const [savedScripts, setSavedScripts] = useState([]);
+  const [saveName, setSaveName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editName, setEditName] = useState("");
+  const [activeScript, setActiveScript] = useState(null);
   const [alliance, setAlliance] = useState("red"); // "red" or "blue"
+
+  useEffect(() => {
+    if (user === undefined) return; // wait for auth to initialize
+    if (!user || !db) {
+      setSavedScripts([]);
+      return;
+    }
+    const loadScripts = async () => {
+      try {
+        const q = query(
+          collection(db, "scripts"),
+          where("userId", "==", user.uid)
+        );
+        const querySnapshot = await getDocs(q);
+        const scripts = [];
+        querySnapshot.forEach((document) => {
+          scripts.push({ id: document.id, ...document.data() });
+        });
+        scripts.sort((a, b) => {
+          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : Date.now();
+          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : Date.now();
+          return timeB - timeA;
+        });
+        setSavedScripts(scripts);
+      } catch (error) {
+        console.error("Error loading scripts:", error);
+      }
+    };
+    loadScripts();
+  }, [user]);
+
+  const saveScript = async () => {
+    if (!user) {
+      alert("Please log in to save scripts.");
+      return;
+    }
+    if (!saveName.trim()) {
+      alert("Please provide a name for the script.");
+      return;
+    }
+    if (!db) {
+      alert("Database not configured.");
+      return;
+    }
+    setIsSaving(true);
+    try {
+      const docRef = await addDoc(collection(db, "scripts"), {
+        userId: user.uid,
+        name: saveName.trim(),
+        code: codeText,
+        alliance: alliance,
+        robotState: robotState,
+        createdAt: serverTimestamp()
+      });
+      const newScript = { id: docRef.id, name: saveName.trim(), code: codeText, alliance, robotState, createdAt: { toMillis: () => Date.now() } };
+      setSavedScripts([newScript, ...savedScripts]);
+      setActiveScript(newScript);
+      setSaveName("");
+    } catch (error) {
+      console.error("Error saving script:", error);
+      alert("Failed to save script.");
+    }
+    setIsSaving(false);
+  };
+
+  const deleteScript = async (id, e) => {
+    e.stopPropagation();
+    if (!confirm("Are you sure you want to delete this script?")) return;
+    try {
+      await deleteDoc(doc(db, "scripts", id));
+      setSavedScripts(savedScripts.filter(s => s.id !== id));
+    } catch (error) {
+      console.error("Error deleting script:", error);
+      alert("Failed to delete script.");
+    }
+  };
+
+  const startEdit = (script, e) => {
+    e.stopPropagation();
+    setEditingId(script.id);
+    setEditName(script.name);
+  };
+
+  const saveEdit = async (id, e) => {
+    e.stopPropagation();
+    if (!editName.trim()) {
+      setEditingId(null);
+      return;
+    }
+    try {
+      await updateDoc(doc(db, "scripts", id), { name: editName.trim() });
+      setSavedScripts(savedScripts.map(s => s.id === id ? { ...s, name: editName.trim() } : s));
+      setEditingId(null);
+    } catch (error) {
+      console.error("Error renaming script:", error);
+      alert("Failed to rename script.");
+    }
+  };
   const [codeText, setCodeText] = useState(originalCodeText);
   const [currentLine, setCurrentLine] = useState("Ready for script input.");
   const [isSimulating, setIsSimulating] = useState(false);
@@ -1036,10 +1144,106 @@ export default function Home() {
 
   return (
     <div className="p-6 flex flex-col items-center">
-      <main className="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-8 mt-4">
+      <main className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4">
+
+        {/* SAVED SCRIPTS PANEL */}
+        <div className="lg:col-span-2 flex flex-col gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-xl max-h-[850px]">
+          <h2 className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold mb-2">Saved Scripts</h2>
+
+          <div className="flex flex-col gap-2 mb-4">
+            <input
+              type="text"
+              placeholder="Script name"
+              value={saveName}
+              onChange={(e) => setSaveName(e.target.value)}
+              className="bg-slate-950 border border-slate-700 text-slate-300 font-mono text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
+            />
+            <button
+              onClick={saveScript}
+              disabled={isSaving || !saveName.trim() || !user}
+              className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-600/40 disabled:opacity-50 disabled:cursor-not-allowed py-2 rounded-lg font-mono text-xs font-bold uppercase transition-colors"
+            >
+              {isSaving ? "Saving..." : "Save Current"}
+            </button>
+            {!user && <p className="text-[10px] text-red-400 font-mono mt-1">Log in to save.</p>}
+          </div>
+
+          <div className="flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar">
+            {savedScripts.map((script) => (
+              <div
+                key={script.id}
+                className={`flex flex-col border rounded-lg overflow-hidden group ${activeScript?.id === script.id ? "bg-slate-800 border-emerald-500" : "bg-slate-950 border-slate-800"}`}
+              >
+                {editingId === script.id ? (
+                  <div className="p-3 flex items-center gap-2">
+                    <input
+                      type="text"
+                      autoFocus
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') saveEdit(script.id, e);
+                        if (e.key === 'Escape') setEditingId(null);
+                      }}
+                      className="flex-1 min-w-0 bg-slate-900 border border-emerald-500 text-slate-300 font-mono text-xs rounded px-2 py-1 focus:outline-none"
+                    />
+                    <button onClick={(e) => saveEdit(script.id, e)} className="text-emerald-400 hover:text-emerald-300">
+                      ✓
+                    </button>
+                    <button onClick={() => setEditingId(null)} className="text-slate-500 hover:text-slate-400">
+                      ✕
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      setCodeText(script.code);
+                      if (script.alliance) setAlliance(script.alliance);
+                      if (script.robotState) {
+                        setRobotState(script.robotState);
+                        setRobotPath([script.robotState]);
+                      }
+                      setActiveScript(script);
+                    }}
+                    className="text-left p-3 hover:bg-slate-900/50 transition-colors"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex items-start gap-2">
+                        {script.alliance && (
+                          <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${script.alliance === "red" ? "bg-red-500" : "bg-blue-500"}`} />
+                        )}
+                        <p className="text-emerald-400 font-mono text-xs font-bold whitespace-pre-wrap break-words text-left" title={script.name}>{script.name}</p>
+                      </div>
+                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span
+                          onClick={(e) => startEdit(script, e)}
+                          className="text-slate-500 hover:text-blue-400 p-1"
+                          title="Rename"
+                        >
+                          ✎
+                        </span>
+                        <span
+                          onClick={(e) => deleteScript(script.id, e)}
+                          className="text-slate-500 hover:text-red-400 p-1"
+                          title="Delete"
+                        >
+                          🗑
+                        </span>
+                      </div>
+                    </div>
+                    <p className="text-slate-500 font-mono text-[10px] mt-1 truncate">Click to load</p>
+                  </button>
+                )}
+              </div>
+            ))}
+            {savedScripts.length === 0 && user && (
+              <p className="text-slate-500 font-mono text-xs italic text-center mt-4">No saved scripts yet.</p>
+            )}
+          </div>
+        </div>
 
         {/* CONTROL DECK CODE TERMINAL */}
-        <div className="lg:col-span-5 flex flex-col gap-6 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+        <div className="lg:col-span-4 flex flex-col gap-6 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
 
           {/* SIMULATOR TITLE */}
           <div className="border-b border-slate-800 pb-4">
@@ -1083,12 +1287,17 @@ export default function Home() {
           </div>
 
           <div className="flex-1 flex flex-col">
-            <label className="text-[15px] block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-mono">
-              Script Editor
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-mono flex items-center justify-between">
+              <span>Script Editor</span>
+              {activeScript && (
+                <span className="text-emerald-400 text-[10px] bg-emerald-950/50 px-2 py-1 rounded border border-emerald-500/30 truncate max-w-[200px]">
+                  Current: {activeScript.name}
+                </span>
+              )}
             </label>
             <p className="text-[13px] text-slate-400 font-mono mb-3 leading-tight">
               <strong>Path Editor:</strong> Drag the robot to position it and click <strong>Rotation</strong> to adjust its heading.
-              All <em>driveFor()</em> measurements are in inches; <em>driveLeft/Right()</em> use degrees.
+              All <em>driveFor()</em> measurements are in inches; <em>turnLeft/Right()</em> use degrees.
               This tool supports all functions listed below.
             </p>
             <textarea
@@ -1130,7 +1339,7 @@ export default function Home() {
         </div>
 
         {/* SIMULATOR CORE VIEWPORT */}
-        <div className="lg:col-span-7 flex flex-col items-center gap-4">
+        <div className="lg:col-span-6 flex flex-col items-center gap-4">
           <div className="border-4 border-slate-800 rounded-3xl overflow-hidden shadow-2xl bg-slate-900 p-2">
             <canvas
               ref={canvasRef}
@@ -1187,7 +1396,7 @@ export default function Home() {
             <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
               <p className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold mb-3">Loader Blocks Key</p>
               <div className="flex justify-around items-center bg-slate-950 border border-slate-800 rounded-xl p-4">
-                
+
                 {/* Left Key Item */}
                 <div className="flex items-center gap-6">
                   <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md flex flex-col flex-shrink-0">

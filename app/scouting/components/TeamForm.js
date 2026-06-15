@@ -1,7 +1,7 @@
 import { useState } from "react";
 
-export default function TeamForm({ onAddTeam, onCancel }) {
-    const [formData, setFormData] = useState({
+export default function TeamForm({ initialData, onAddTeam, onCancel }) {
+    const [formData, setFormData] = useState(initialData || {
         teamNumber: "",
         robotImagePreview: null,
         drivetrainSpeed: "",
@@ -56,7 +56,7 @@ export default function TeamForm({ onAddTeam, onCancel }) {
         return (
             <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
                 <h2 className="text-2xl font-bold font-mono text-white mb-6">
-                    Add Team - Basic Info
+                    {initialData ? "Edit Team - Basic Info" : "Add Team - Basic Info"}
                 </h2>
 
                 <form onSubmit={(e) => { e.preventDefault(); setCurrentStep(2); }} className="space-y-4">
@@ -167,7 +167,7 @@ export default function TeamForm({ onAddTeam, onCancel }) {
         return (
             <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
                 <h2 className="text-2xl font-bold font-mono text-white mb-6">
-                    Add Team - Auton
+                    {initialData ? "Edit Team - Auton" : "Add Team - Auton"}
                 </h2>
 
                 <form onSubmit={(e) => { e.preventDefault(); setCurrentStep(3); }} className="space-y-4">
@@ -258,7 +258,7 @@ export default function TeamForm({ onAddTeam, onCancel }) {
         return (
             <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
                 <h2 className="text-2xl font-bold font-mono text-white mb-6">
-                    Add Team - Strategy & Capabilities
+                    {initialData ? "Edit Team - Strategy & Capabilities" : "Add Team - Strategy & Capabilities"}
                 </h2>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
@@ -385,7 +385,7 @@ export default function TeamForm({ onAddTeam, onCancel }) {
                             type="submit"
                             className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition-colors"
                         >
-                            Add Team
+                            {initialData ? "Save Changes" : "Add Team"}
                         </button>
                     </div>
                 </form>

@@ -2,63 +2,110 @@
 import { useState, useEffect } from "react";
 import CompetitionForm from "./components/CompetitionForm";
 import CompetitionView from "./components/CompetitionView";
+import { useAuth } from "@/context/AuthContext";
+import { collection, doc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
+import { db } from "@/lib/firebase";
 
 export default function ScoutingPage() {
+    const { user } = useAuth();
     const [competitions, setCompetitions] = useState([]);
     const [selectedCompetitionId, setSelectedCompetitionId] = useState(null);
     const [showForm, setShowForm] = useState(false);
+    const [isLoaded, setIsLoaded] = useState(false);
 
-    // Load competitions from localStorage
+    // Load competitions from Firestore or localStorage
     useEffect(() => {
-        const savedCompetitions = localStorage.getItem("vex_competitions");
-        if (savedCompetitions) {
+        if (user === undefined) return;
+        const load = async () => {
+            if (user && db) {
+                try {
+                    const q = query(collection(db, "competitions"), where("userId", "==", user.uid));
+                    const snapshot = await getDocs(q);
+                    const loaded = [];
+                    snapshot.forEach(d => {
+                        loaded.push({ id: d.id, ...d.data() });
+                    });
+                    setCompetitions(loaded);
+                } catch (err) {
+                    console.error("Error loading competitions:", err);
+                }
+            } else {
+                const saved = localStorage.getItem("vex_competitions");
+                if (saved) {
+                    try {
+                        setCompetitions(JSON.parse(saved));
+                    } catch (error) {
+                        console.error("Error loading competitions:", error);
+                    }
+                }
+            }
+            setIsLoaded(true);
+        };
+        load();
+    }, [user]);
+
+    // Save competitions to localStorage for guest users
+    useEffect(() => {
+        if (!isLoaded || user) return;
+        localStorage.setItem("vex_competitions", JSON.stringify(competitions));
+    }, [competitions, user, isLoaded]);
+
+    const handleCreateCompetition = async (newCompetition) => {
+        const id = Date.now().toString();
+        const newComp = {
+            id,
+            name: newCompetition.name,
+            date: newCompetition.date,
+            teams: [],
+        };
+        setCompetitions([...competitions, newComp]);
+        setShowForm(false);
+        if (user && db) {
             try {
-                setCompetitions(JSON.parse(savedCompetitions));
-            } catch (error) {
-                console.error("Error loading competitions:", error);
+                await setDoc(doc(db, "competitions", id), { ...newComp, userId: user.uid });
+            } catch (err) {
+                console.error("Error saving competition:", err);
             }
         }
-    }, []);
-
-    // Save competitions to localStorage (excluding images)
-    useEffect(() => {
-        const competitionsToSave = competitions.map((comp) => ({
-            ...comp,
-            teams: comp.teams.map((team) => {
-                const { robotImagePreview, ...teamWithoutImage } = team;
-                return teamWithoutImage;
-            }),
-        }));
-        localStorage.setItem("vex_competitions", JSON.stringify(competitionsToSave));
-    }, [competitions]);
-
-    const handleCreateCompetition = (newCompetition) => {
-        const id = Date.now().toString();
-        setCompetitions([
-            ...competitions,
-            {
-                id,
-                name: newCompetition.name,
-                date: newCompetition.date,
-                teams: [],
-            },
-        ]);
-        setShowForm(false);
     };
 
-    const handleDeleteCompetition = (id) => {
+    const handleDeleteCompetition = async (id) => {
+        if (!confirm("Are you sure you want to delete this competition? This action cannot be undone.")) return;
         setCompetitions(competitions.filter((c) => c.id !== id));
         if (selectedCompetitionId === id) {
             setSelectedCompetitionId(null);
         }
+        if (user && db) {
+            try {
+                await deleteDoc(doc(db, "competitions", id));
+            } catch (err) {
+                console.error("Error deleting competition:", err);
+            }
+        }
     };
 
-    const handleUpdateTeams = (competitionId, teams) => {
+    const handleUpdateTeams = async (competitionId, teams) => {
+        const comp = competitions.find(c => c.id === competitionId);
+        if (!comp) return;
+        const updatedComp = { ...comp, teams };
+
         setCompetitions(
             competitions.map((c) =>
-                c.id === competitionId ? { ...c, teams } : c
+                c.id === competitionId ? updatedComp : c
             )
         );
+
+        if (user && db) {
+            const compToSave = {
+                ...updatedComp,
+                userId: user.uid,
+            };
+            try {
+                await setDoc(doc(db, "competitions", competitionId), compToSave);
+            } catch (err) {
+                console.error("Error updating teams:", err);
+            }
+        }
     };
 
     const selectedCompetition = competitions.find(

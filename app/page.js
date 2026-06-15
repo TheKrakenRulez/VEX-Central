@@ -77,7 +77,7 @@ export default function WelcomeDashboard() {
 
             <div className="flex justify-between items-start mb-6">
               <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/30 rounded-2xl flex items-center justify-center text-xl text-blue-400 font-mono font-bold shadow-inner">
-                📊
+                📋
               </div>
               <span className="text-slate-600 group-hover:text-blue-400 font-bold transition-colors">➔</span>
             </div>

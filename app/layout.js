@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata = {
   title: "VEX Central",
-  description: "A local sandbox for compiling and rendering robot trajectories",
+  description: "The ultimate companion platform for VEX Robotics teams.",
   icons: {
     icon: [
       {

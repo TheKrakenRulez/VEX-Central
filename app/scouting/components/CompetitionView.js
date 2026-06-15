@@ -4,14 +4,31 @@ import TeamCard from "./TeamCard";
 
 export default function CompetitionView({ competition, onBack, onUpdateTeams }) {
     const [showTeamForm, setShowTeamForm] = useState(false);
+    const [editingTeam, setEditingTeam] = useState(null);
 
     const handleAddTeam = (teamData) => {
-        const newTeam = {
-            id: Date.now().toString(),
-            ...teamData,
-        };
-        onUpdateTeams([...competition.teams, newTeam]);
+        if (editingTeam) {
+            const updatedTeams = competition.teams.map(t => t.id === editingTeam.id ? { ...teamData, id: editingTeam.id } : t);
+            onUpdateTeams(updatedTeams);
+        } else {
+            const newTeam = {
+                id: Date.now().toString(),
+                ...teamData,
+            };
+            onUpdateTeams([...competition.teams, newTeam]);
+        }
         setShowTeamForm(false);
+        setEditingTeam(null);
+    };
+
+    const handleEditTeam = (team) => {
+        setEditingTeam(team);
+        setShowTeamForm(true);
+    };
+
+    const handleCancel = () => {
+        setShowTeamForm(false);
+        setEditingTeam(null);
     };
 
     const handleDeleteTeam = (teamId) => {
@@ -46,8 +63,9 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams }) 
                 {showTeamForm ? (
                     <div className="mb-12">
                         <TeamForm
+                            initialData={editingTeam}
                             onAddTeam={handleAddTeam}
-                            onCancel={() => setShowTeamForm(false)}
+                            onCancel={handleCancel}
                         />
                     </div>
                 ) : (
@@ -79,6 +97,7 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams }) 
                                     <TeamCard
                                         key={team.id}
                                         team={team}
+                                        onEdit={() => handleEditTeam(team)}
                                         onDelete={() => handleDeleteTeam(team.id)}
                                     />
                                 ))}
