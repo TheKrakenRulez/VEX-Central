@@ -34,7 +34,7 @@ export default function WelcomeDashboard() {
         </div>
 
         {/* INTERACTIVE NAVIGATION CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full mt-4 max-w-4xl">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full mt-4 max-w-6xl">
 
           {/* CARD 1: SIMULATOR */}
           <Link
@@ -94,6 +94,36 @@ export default function WelcomeDashboard() {
             <div className="mt-8 pt-4 border-t border-slate-800/60 flex items-center gap-2">
               <span className="text-[10px] font-mono text-blue-400 uppercase font-black tracking-wider">
                 Start Scouting
+              </span>
+              <span className="text-slate-500 text-xs font-bold group-hover:translate-x-1 transition-transform">→</span>
+            </div>
+          </Link>
+
+          {/* CARD 3: TEAM WORKSPACE */}
+          <Link
+            href="/team"
+            className="group relative bg-slate-900/50 hover:bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-3xl p-8 text-left shadow-2xl transition-all duration-300 transform hover:scale-[1.02] overflow-hidden"
+          >
+            {/* Hover card border glow */}
+            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all duration-300" />
+
+            <div className="flex justify-between items-start mb-6">
+              <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center text-xl text-emerald-400 font-mono font-bold shadow-inner">
+                👥
+              </div>
+              <span className="text-slate-600 group-hover:text-emerald-400 font-bold transition-colors">➔</span>
+            </div>
+
+            <h2 className="text-xl font-bold font-mono uppercase text-white tracking-wide group-hover:text-emerald-400 transition-colors">
+              Team Workspace
+            </h2>
+            <p className="text-sm text-slate-400 mt-4 leading-relaxed font-sans">
+              Collaborate with your robotics team. Share scouting data, chat in real-time, send images, and run polls to make critical design decisions.
+            </p>
+
+            <div className="mt-8 pt-4 border-t border-slate-800/60 flex items-center gap-2">
+              <span className="text-[10px] font-mono text-emerald-400 uppercase font-black tracking-wider">
+                Open Workspace
               </span>
               <span className="text-slate-500 text-xs font-bold group-hover:translate-x-1 transition-transform">→</span>
             </div>

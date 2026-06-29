@@ -1,8 +1,9 @@
 import { useState } from "react";
 
-export default function CompetitionForm({ onCreateCompetition }) {
+export default function CompetitionForm({ onCreateCompetition, userTeams = [] }) {
     const [name, setName] = useState("");
     const [date, setDate] = useState("");
+    const [teamId, setTeamId] = useState("");
     const [error, setError] = useState("");
 
     const handleSubmit = (e) => {
@@ -18,9 +19,15 @@ export default function CompetitionForm({ onCreateCompetition }) {
             return;
         }
 
-        onCreateCompetition({ name, date });
+        const data = { name, date };
+        if (teamId) {
+            data.teamId = teamId;
+        }
+
+        onCreateCompetition(data);
         setName("");
         setDate("");
+        setTeamId("");
     };
 
     return (
@@ -54,6 +61,24 @@ export default function CompetitionForm({ onCreateCompetition }) {
                         className="w-full bg-slate-800 border border-slate-700 rounded px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors"
                     />
                 </div>
+
+                {userTeams.length > 0 && (
+                    <div>
+                        <label className="block text-sm font-mono text-slate-300 mb-2">
+                            Share with Team (Optional)
+                        </label>
+                        <select
+                            value={teamId}
+                            onChange={(e) => setTeamId(e.target.value)}
+                            className="w-full bg-slate-800 border border-slate-700 rounded px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors"
+                        >
+                            <option value="">Personal (Do not share)</option>
+                            {userTeams.map(t => (
+                                <option key={t.id} value={t.id}>{t.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                )}
 
                 {error && (
                     <div className="bg-red-900/30 border border-red-700 rounded px-4 py-2 text-red-300 text-sm font-mono">

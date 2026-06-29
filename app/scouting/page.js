@@ -13,19 +13,35 @@ export default function ScoutingPage() {
     const [showForm, setShowForm] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
 
+    const [userTeams, setUserTeams] = useState([]);
+
     // Load competitions from Firestore or localStorage
     useEffect(() => {
         if (user === undefined) return;
         const load = async () => {
             if (user && db) {
                 try {
-                    const q = query(collection(db, "competitions"), where("userId", "==", user.uid));
-                    const snapshot = await getDocs(q);
-                    const loaded = [];
-                    snapshot.forEach(d => {
-                        loaded.push({ id: d.id, ...d.data() });
-                    });
-                    setCompetitions(loaded);
+                    // Fetch user's teams
+                    const tq = query(collection(db, "teams"), where("members", "array-contains", user.uid));
+                    const teamSnap = await getDocs(tq);
+                    const teamsList = [];
+                    teamSnap.forEach(d => teamsList.push({ id: d.id, ...d.data() }));
+                    setUserTeams(teamsList);
+                    const teamIds = teamsList.map(t => t.id);
+
+                    // Fetch competitions
+                    const loaded = new Map();
+                    const q1 = query(collection(db, "competitions"), where("userId", "==", user.uid));
+                    const snap1 = await getDocs(q1);
+                    snap1.forEach(d => loaded.set(d.id, { id: d.id, ...d.data() }));
+
+                    if (teamIds.length > 0) {
+                        const q2 = query(collection(db, "competitions"), where("teamId", "in", teamIds));
+                        const snap2 = await getDocs(q2);
+                        snap2.forEach(d => loaded.set(d.id, { id: d.id, ...d.data() }));
+                    }
+
+                    setCompetitions(Array.from(loaded.values()));
                 } catch (err) {
                     console.error("Error loading competitions:", err);
                 }
@@ -56,8 +72,11 @@ export default function ScoutingPage() {
             id,
             name: newCompetition.name,
             date: newCompetition.date,
+            teamId: newCompetition.teamId || null,
             teams: [],
         };
+        if (!newComp.teamId) delete newComp.teamId;
+        
         setCompetitions([...competitions, newComp]);
         setShowForm(false);
         if (user && db) {
@@ -150,7 +169,7 @@ export default function ScoutingPage() {
                         >
                             ← Back to Competitions
                         </button>
-                        <CompetitionForm onCreateCompetition={handleCreateCompetition} />
+                        <CompetitionForm onCreateCompetition={handleCreateCompetition} userTeams={userTeams} />
                     </div>
                 ) : (
                     <>
@@ -190,6 +209,11 @@ export default function ScoutingPage() {
                                                 </h2>
                                                 <p className="text-slate-400 text-sm font-mono mt-1">
                                                     📅 {new Date(competition.date).toLocaleDateString()}
+                                                    {competition.teamId && (
+                                                        <span className="ml-3 px-2 py-0.5 bg-emerald-900/40 text-emerald-400 text-xs rounded-full border border-emerald-500/30">
+                                                            Team Shared
+                                                        </span>
+                                                    )}
                                                 </p>
                                             </div>
                                         </div>
