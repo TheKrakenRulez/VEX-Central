@@ -127,6 +127,39 @@ export default function ScoutingPage() {
         }
     };
 
+    const handleUpdateSharing = async (competitionId, teamId) => {
+        const comp = competitions.find(c => c.id === competitionId);
+        if (!comp) return;
+
+        const updatedComp = { ...comp };
+        if (teamId) {
+            updatedComp.teamId = teamId;
+        } else {
+            delete updatedComp.teamId;
+        }
+
+        setCompetitions(
+            competitions.map((c) =>
+                c.id === competitionId ? updatedComp : c
+            )
+        );
+
+        if (user && db) {
+            try {
+                const compToSave = {
+                    ...updatedComp,
+                    userId: user.uid,
+                };
+                if (!teamId) {
+                    delete compToSave.teamId;
+                }
+                await setDoc(doc(db, "competitions", competitionId), compToSave);
+            } catch (err) {
+                console.error("Error updating sharing team:", err);
+            }
+        }
+    };
+
     const selectedCompetition = competitions.find(
         (c) => c.id === selectedCompetitionId
     );
@@ -136,8 +169,12 @@ export default function ScoutingPage() {
             <CompetitionView
                 competition={selectedCompetition}
                 onBack={() => setSelectedCompetitionId(null)}
+                userTeams={userTeams}
                 onUpdateTeams={(teams) =>
                     handleUpdateTeams(selectedCompetitionId, teams)
+                }
+                onUpdateSharing={(teamId) =>
+                    handleUpdateSharing(selectedCompetitionId, teamId)
                 }
             />
         );

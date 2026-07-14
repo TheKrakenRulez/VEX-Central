@@ -13,6 +13,8 @@ export default function TeamForm({ initialData, onAddTeam, onCancel }) {
         deScoring: "",
         singleParking: "",
         doubleParking: "",
+        hasMatchloaderIntake: "",
+        matchloaderSpeed: "",
     });
 
     const [error, setError] = useState("");
@@ -366,6 +368,50 @@ export default function TeamForm({ initialData, onAddTeam, onCancel }) {
                             ))}
                         </div>
                     </div>
+
+                    <div>
+                        <label className="block text-sm font-mono text-slate-300 mb-2">
+                            Has Matchloader Intake?
+                        </label>
+                        <div className="space-y-2">
+                            {["yes", "no"].map((option) => (
+                                <label key={option} className="flex items-center gap-3 cursor-pointer">
+                                    <input
+                                        type="radio"
+                                        name="hasMatchloaderIntake"
+                                        value={option}
+                                        checked={formData.hasMatchloaderIntake === option}
+                                        onChange={handleInputChange}
+                                        className="w-4 h-4"
+                                    />
+                                    <span className="text-slate-300 capitalize font-mono">{option}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+
+                    {formData.hasMatchloaderIntake === "yes" && (
+                        <div>
+                            <label className="block text-sm font-mono text-slate-300 mb-2">
+                                Matchloader Intake Speed
+                            </label>
+                            <div className="space-y-2">
+                                {["fast", "med", "slow"].map((speed) => (
+                                    <label key={speed} className="flex items-center gap-3 cursor-pointer">
+                                        <input
+                                            type="radio"
+                                            name="matchloaderSpeed"
+                                            value={speed}
+                                            checked={formData.matchloaderSpeed === speed}
+                                            onChange={handleInputChange}
+                                            className="w-4 h-4"
+                                        />
+                                        <span className="text-slate-300 capitalize font-mono">{speed}</span>
+                                    </label>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     {error && (
                         <div className="bg-red-900/30 border border-red-700 rounded px-4 py-2 text-red-300 text-sm font-mono">

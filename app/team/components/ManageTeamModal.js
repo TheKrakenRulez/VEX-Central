@@ -67,6 +67,10 @@ export default function ManageTeamModal({ team, user, onClose, onUpdate }) {
   };
 
   const handleDemote = async (memberId) => {
+    if (memberId === team.createdBy) {
+      setError("Cannot demote the team owner.");
+      return;
+    }
     if ((team.admins || []).length <= 1) {
       setError("Cannot demote the last admin.");
       return;
@@ -81,6 +85,10 @@ export default function ManageTeamModal({ team, user, onClose, onUpdate }) {
   };
 
   const handleRemoveMember = async (memberId) => {
+    if (memberId === team.createdBy && (team.members || []).length > 1) {
+      setError("Cannot remove the team owner.");
+      return;
+    }
     if ((team.members || []).length === 1 && memberId === user.uid) {
       // Last member deleting themselves deletes the team
       if (confirm("You are the last member. Leaving will permanently delete this team. Are you sure?")) {
@@ -199,6 +207,7 @@ export default function ManageTeamModal({ team, user, onClose, onUpdate }) {
                 const isMe = memberId === user.uid;
                 const isAdmin = (team.admins || []).includes(memberId);
                 const details = team.memberDetails?.[memberId] || { name: "Unknown User", photoURL: "" };
+                const isOwner = memberId === team.createdBy;
 
                 return (
                   <div key={memberId} className="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg p-3">
@@ -214,25 +223,51 @@ export default function ManageTeamModal({ team, user, onClose, onUpdate }) {
                         <div className="text-white font-bold text-sm flex items-center gap-2">
                           {details.name} {isMe && <span className="text-emerald-500 text-[10px] uppercase font-mono">(You)</span>}
                         </div>
-                        <div className="text-xs text-slate-500 font-mono">{isAdmin ? "👑 Admin" : "Member"}</div>
+                        <div className="text-xs text-slate-500 font-mono">{isOwner ? "👑 Owner" : isAdmin ? "Admin" : "Member"}</div>
                       </div>
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      {!isAdmin ? (
-                        <button onClick={() => handlePromote(memberId)} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded transition-colors" title="Make Admin">⬆ Promote</button>
-                      ) : (
-                        <button onClick={() => handleDemote(memberId)} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs rounded transition-colors" title="Remove Admin">⬇ Demote</button>
+                      {!isOwner && (
+                        <>
+                          {!isAdmin ? (
+                            <button onClick={() => handlePromote(memberId)} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs rounded transition-colors" title="Make Admin">⬆ Promote</button>
+                          ) : (
+                            <button onClick={() => handleDemote(memberId)} className="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-400 text-xs rounded transition-colors" title="Remove Admin">⬇ Demote</button>
+                          )}
+                          <button onClick={() => handleRemoveMember(memberId)} className="px-2 py-1 bg-red-900/40 hover:bg-red-600 text-red-400 hover:text-white text-xs rounded transition-colors" title={isMe ? "Leave Team" : "Remove from Team"}>
+                            {isMe ? "Leave" : "Kick"}
+                          </button>
+                        </>
                       )}
-                      <button onClick={() => handleRemoveMember(memberId)} className="px-2 py-1 bg-red-900/40 hover:bg-red-600 text-red-400 hover:text-white text-xs rounded transition-colors" title={isMe ? "Leave Team" : "Remove from Team"}>
-                        {isMe ? "Leave" : "Kick"}
-                      </button>
                     </div>
                   </div>
                 );
               })}
             </div>
           </section>
+
+          {/* Delete Team (owner only) */}
+          {user.uid === team.createdBy && (
+            <section className="pt-4 border-t border-slate-800">
+              <button
+                onClick={async () => {
+                  if (window.confirm("Are you sure you want to permanently delete this team? This action cannot be undone.")) {
+                    try {
+                      await deleteDoc(doc(db, "teams", team.id));
+                      router.push("/team");
+                    } catch (err) {
+                      console.error(err);
+                      setError("Failed to delete team.");
+                    }
+                  }
+                }}
+                className="w-full bg-red-900 hover:bg-red-800 text-white font-bold py-2 px-4 rounded transition-colors"
+              >
+                Delete Team
+              </button>
+            </section>
+          )}
 
         </div>
       </div>

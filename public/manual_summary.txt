@@ -1,0 +1,4 @@
+// Placeholder manual summary. Replace with the relevant sections of the VEX game manual.
+
+export const manualSummary = `
+`;

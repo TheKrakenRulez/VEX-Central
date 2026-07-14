@@ -136,6 +136,14 @@ export default function TeamCard({ team, onEdit, onDelete }) {
                                         </span>
                                     </p>
                                 )}
+                                {team.hasMatchloaderIntake && (
+                                    <p className="text-slate-300">
+                                        Matchloader Intake:{" "}
+                                        <span className={team.hasMatchloaderIntake === "yes" ? "text-green-400" : "text-red-400"}>
+                                            {team.hasMatchloaderIntake === "yes" ? `✓ Yes (${team.matchloaderSpeed || "average"})` : "✗ No"}
+                                        </span>
+                                    </p>
+                                )}
                             </div>
                         </div>
                     )}

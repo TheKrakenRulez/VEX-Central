@@ -1,6 +1,7 @@
 "use client";
 import Link from "next/link";
 
+
 export default function WelcomeDashboard() {
   return (
     <div className="min-h-[80vh] flex flex-col justify-center items-center px-6 relative overflow-hidden">
@@ -86,7 +87,7 @@ export default function WelcomeDashboard() {
               Scouting
             </h2>
             <p className="text-sm text-slate-400 mt-4 leading-relaxed font-sans">
-              Add competitions, scout teams, and track each robot's capabilities. Record speed, efficiency, autonomous data, scoring metrics, and more.
+              Add competitions and track robot capabilities such as speed, efficiency, auton data, scoring, and more. Use our Match Scout ranking system to filter through robots and find the best alliance for you.
 
 
             </p>
@@ -118,7 +119,7 @@ export default function WelcomeDashboard() {
               Team Workspace
             </h2>
             <p className="text-sm text-slate-400 mt-4 leading-relaxed font-sans">
-              Collaborate with your robotics team. Share scouting data, chat in real-time, send images, and run polls to make critical design decisions.
+                Collaborate with your entire team. Share scouting data, chat in real-time, and run team polls to make critical design decisions together, keeping everyone aligned throughout the entire competition season.
             </p>
 
             <div className="mt-8 pt-4 border-t border-slate-800/60 flex items-center gap-2">
@@ -131,7 +132,8 @@ export default function WelcomeDashboard() {
 
         </div>
 
-      </main>
+          
+        </main>
     </div>
   );
 }
