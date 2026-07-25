@@ -3,7 +3,7 @@ import { useState, useEffect } from "react";
 import CompetitionForm from "./components/CompetitionForm";
 import CompetitionView from "./components/CompetitionView";
 import { useAuth } from "@/context/AuthContext";
-import { collection, doc, setDoc, getDocs, query, where, deleteDoc } from "firebase/firestore";
+import { collection, doc, setDoc, getDocs, query, where, deleteDoc, addDoc } from "firebase/firestore";
 import { db } from "@/lib/firebase";
 
 export default function ScoutingPage() {
@@ -154,6 +154,18 @@ export default function ScoutingPage() {
                     delete compToSave.teamId;
                 }
                 await setDoc(doc(db, "competitions", competitionId), compToSave);
+
+                // Send chat message if shared with a team
+                if (teamId) {
+                    await addDoc(collection(db, "team_messages"), {
+                        teamId: teamId,
+                        senderId: user.uid,
+                        senderName: user.displayName || "User",
+                        text: `Hey team! I just shared the scouting data for the "${updatedComp.name}" competition.`,
+                        link: "/scouting",
+                        createdAt: new Date().toISOString()
+                    });
+                }
             } catch (err) {
                 console.error("Error updating sharing team:", err);
             }

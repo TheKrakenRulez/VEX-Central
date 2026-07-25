@@ -150,6 +150,13 @@ export default function ChatBox({ team, user }) {
                 {/* Text Message */}
                 {msg.text && <p className="whitespace-pre-wrap font-sans text-sm">{msg.text}</p>}
                 
+                {/* Link Message */}
+                {msg.link && (
+                  <a href={msg.link} className="mt-2 inline-block bg-white/20 hover:bg-white/30 text-white font-mono text-xs px-3 py-1.5 rounded-lg transition-colors">
+                    🔗 View Link
+                  </a>
+                )}
+                
                 {/* Image Message */}
                 {msg.image && (
                   <img src={msg.image} alt="Upload" className="rounded-xl max-h-64 object-contain mt-1" />
