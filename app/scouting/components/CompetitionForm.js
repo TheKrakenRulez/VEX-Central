@@ -3,6 +3,7 @@ import { useState } from "react";
 export default function CompetitionForm({ onCreateCompetition, userTeams = [] }) {
     const [name, setName] = useState("");
     const [date, setDate] = useState("");
+    const [gameMode, setGameMode] = useState("push_back");
     const [teamId, setTeamId] = useState("");
     const [error, setError] = useState("");
 
@@ -19,7 +20,7 @@ export default function CompetitionForm({ onCreateCompetition, userTeams = [] })
             return;
         }
 
-        const data = { name, date };
+        const data = { name, date, gameMode };
         if (teamId) {
             data.teamId = teamId;
         }
@@ -27,6 +28,7 @@ export default function CompetitionForm({ onCreateCompetition, userTeams = [] })
         onCreateCompetition(data);
         setName("");
         setDate("");
+        setGameMode("push_back");
         setTeamId("");
     };
 
@@ -60,6 +62,20 @@ export default function CompetitionForm({ onCreateCompetition, userTeams = [] })
                         onChange={(e) => setDate(e.target.value)}
                         className="w-full bg-slate-800 border border-slate-700 rounded px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors"
                     />
+                </div>
+
+                <div>
+                    <label className="block text-sm font-mono text-slate-300 mb-2">
+                        Game / Season
+                    </label>
+                    <select
+                        value={gameMode}
+                        onChange={(e) => setGameMode(e.target.value)}
+                        className="w-full bg-slate-800 border border-slate-700 rounded px-4 py-2 text-white font-mono focus:outline-none focus:border-blue-500 transition-colors"
+                    >
+                        <option value="push_back">25-26 Push Back</option>
+                        <option value="override">26-27 Override</option>
+                    </select>
                 </div>
 
                 {userTeams.length > 0 && (

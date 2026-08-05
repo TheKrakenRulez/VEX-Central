@@ -1,31 +1,57 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import TeamForm from "./TeamForm";
 import TeamCard from "./TeamCard";
 import MyTeamForm from "./MyTeamForm";
 import AllianceRecommendations from "./AllianceRecommendations";
 
+const formatCompetitionDate = (value) => {
+    if (!value) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split("-").map(Number);
+        return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+
+    return parsed.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    });
+};
+
 export default function CompetitionView({ competition, onBack, onUpdateTeams, userTeams = [], onUpdateSharing }) {
     const [showTeamForm, setShowTeamForm] = useState(false);
     const [showMyTeamForm, setShowMyTeamForm] = useState(false);
     const [editingTeam, setEditingTeam] = useState(null);
-    const [userTeam, setUserTeam] = useState(null);
 
-    // Load persisted "My Team" from localStorage on component mount
-    useEffect(() => {
-        const savedTeam = localStorage.getItem("scouting_my_team");
-        if (savedTeam) {
-            try {
-                setUserTeam(JSON.parse(savedTeam));
-            } catch (e) {
-                console.error("Failed to parse saved user team:", e);
-            }
+    const initialUserTeam = (() => {
+        if (typeof window === "undefined") return null;
+
+        try {
+            const savedTeam = localStorage.getItem("scouting_my_team");
+            return savedTeam ? JSON.parse(savedTeam) : null;
+        } catch (e) {
+            console.error("Failed to parse saved user team:", e);
+            return null;
         }
-    }, []);
+    })();
+
+    const [userTeam, setUserTeam] = useState(initialUserTeam);
 
     // Save "My Team" to localStorage when it updates
     const handleSaveMyTeam = (teamData) => {
-        setUserTeam(teamData);
-        localStorage.setItem("scouting_my_team", JSON.stringify(teamData));
+        const nextTeamData = {
+            ...teamData,
+            gameMode: teamData.gameMode || competition.gameMode || "push_back",
+        };
+        setUserTeam(nextTeamData);
+        localStorage.setItem("scouting_my_team", JSON.stringify(nextTeamData));
         setShowMyTeamForm(false);
     };
 
@@ -86,9 +112,17 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
                         <h1 className="text-4xl md:text-5xl font-black font-mono tracking-tight text-white uppercase mb-2">
                             {competition.name}
                         </h1>
-                        <p className="text-slate-400 font-mono text-sm">
-                            📅 {new Date(competition.date).toLocaleDateString()}
-                        </p>
+                        <div className="flex items-center gap-3">
+                            <p className="text-slate-400 font-mono text-sm">
+                                📅 {formatCompetitionDate(competition.date)}
+                            </p>
+                            <span className={`px-3 py-1 text-xs font-mono font-bold rounded uppercase tracking-wider ${competition.gameMode === "override"
+                                    ? "bg-purple-900/50 border border-purple-500 text-purple-300"
+                                    : "bg-orange-900/50 border border-orange-500 text-orange-300"
+                                }`}>
+                                {competition.gameMode === "override" ? "26-27 Override" : "25-26 Push Back"}
+                            </span>
+                        </div>
                     </div>
 
                     {userTeams.length > 0 && onUpdateSharing && (
@@ -114,6 +148,7 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
                             initialData={editingTeam}
                             onAddTeam={handleAddTeam}
                             onCancel={handleCancel}
+                            gameMode={competition.gameMode || "push_back"}
                         />
                     </div>
                 ) : showMyTeamForm ? (
@@ -122,6 +157,7 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
                             initialData={userTeam}
                             onSave={handleSaveMyTeam}
                             onCancel={() => setShowMyTeamForm(false)}
+                            gameMode={competition.gameMode || "push_back"}
                         />
                     </div>
                 ) : (
@@ -160,10 +196,10 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
                                     My Team Overview (Team {userTeam.teamNumber})
                                 </h3>
                                 <div className="max-w-md">
-                                    <TeamCard 
-                                        team={userTeam} 
-                                        onEdit={() => setShowMyTeamForm(true)} 
-                                        onDelete={handleClearMyTeam} 
+                                    <TeamCard
+                                        team={userTeam}
+                                        onEdit={() => setShowMyTeamForm(true)}
+                                        onDelete={handleClearMyTeam}
                                     />
                                 </div>
                             </div>
@@ -176,7 +212,7 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
                                     Alliance Match Scout Recommendations
                                 </span>
                                 <p className="text-slate-400 text-sm font-mono max-w-lg mx-auto mb-4">
-                                    We cannot rank opponent teams or check alliance compatibility until you define your own team's stats.
+                                    We cannot rank opponent teams or check alliance compatibility until you define your own team&apos;s stats.
                                 </p>
                                 <button
                                     onClick={() => setShowMyTeamForm(true)}
@@ -193,6 +229,7 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
                                 <AllianceRecommendations
                                     myTeam={userTeam}
                                     allTeams={competition.teams}
+                                    gameMode={competition.gameMode || "push_back"}
                                 />
                             </div>
                         )}

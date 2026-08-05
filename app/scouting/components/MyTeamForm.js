@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function MyTeamForm({ initialData, onSave, onCancel }) {
+export default function MyTeamForm({ initialData, onSave, onCancel, gameMode = "push_back" }) {
   const [formData, setFormData] = useState(initialData || {
     teamNumber: "",
     robotImagePreview: null,
@@ -15,10 +15,16 @@ export default function MyTeamForm({ initialData, onSave, onCancel }) {
     doubleParking: "",
     hasMatchloaderIntake: "",
     matchloaderSpeed: "",
+    blockScoringSpeed: "",
+    cupScoringSpeed: "",
+    canFlipBlocks: "",
+    canFlipCups: "",
+    hasToggleAbility: "",
   });
 
   const [error, setError] = useState("");
   const [currentStep, setCurrentStep] = useState(1);
+  const isOverride = gameMode === "override" || initialData?.gameMode === "override";
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -49,7 +55,10 @@ export default function MyTeamForm({ initialData, onSave, onCancel }) {
       return;
     }
 
-    onSave(formData);
+    onSave({
+      ...formData,
+      gameMode: isOverride ? "override" : "push_back",
+    });
   };
 
   // Step 1: Basic Info
@@ -254,57 +263,174 @@ export default function MyTeamForm({ initialData, onSave, onCancel }) {
     );
   }
 
-  // Step 3: Matchloader Intake
+  // Step 3: Game-specific capabilities
   if (currentStep === 3) {
     return (
       <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
-        <h2 className="text-2xl font-bold font-mono text-white mb-6">
-          Set My Team - Matchloader Intake
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold font-mono text-white">
+            Set My Team - Game Skills
+          </h2>
+          <span className={`px-3 py-1 text-xs font-mono font-bold rounded uppercase tracking-wider ${isOverride ? "bg-purple-900/50 border border-purple-500 text-purple-300" : "bg-orange-900/50 border border-orange-500 text-orange-300"}`}>
+            {isOverride ? "26-27 Override" : "25-26 Push Back"}
+          </span>
+        </div>
 
         <form onSubmit={(e) => { e.preventDefault(); setCurrentStep(4); }} className="space-y-4">
-          <div>
-            <label className="block text-sm font-mono text-slate-300 mb-2">
-              Does your robot have a Matchloader Intake?
-            </label>
-            <div className="space-y-2">
-              {["yes", "no"].map((option) => (
-                <label key={option} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="hasMatchloaderIntake"
-                    value={option}
-                    checked={formData.hasMatchloaderIntake === option}
-                    onChange={handleInputChange}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-slate-300 capitalize font-mono">{option}</span>
+          {isOverride ? (
+            <>
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  Block Scoring Speed
                 </label>
-              ))}
-            </div>
-          </div>
-
-          {formData.hasMatchloaderIntake === "yes" && (
-            <div>
-              <label className="block text-sm font-mono text-slate-300 mb-2">
-                Matchloader Intake Speed
-              </label>
-              <div className="space-y-2">
-                {["fast", "med", "slow"].map((speed) => (
-                  <label key={speed} className="flex items-center gap-3 cursor-pointer">
-                    <input
-                      type="radio"
-                      name="matchloaderSpeed"
-                      value={speed}
-                      checked={formData.matchloaderSpeed === speed}
-                      onChange={handleInputChange}
-                      className="w-4 h-4"
-                    />
-                    <span className="text-slate-300 capitalize font-mono">{speed}</span>
-                  </label>
-                ))}
+                <div className="space-y-2">
+                  {["fast", "average", "slow", "none"].map((speed) => (
+                    <label key={speed} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="blockScoringSpeed"
+                        value={speed}
+                        checked={formData.blockScoringSpeed === speed}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{speed}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
+
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  Cup Scoring Speed
+                </label>
+                <div className="space-y-2">
+                  {["fast", "average", "slow", "none"].map((speed) => (
+                    <label key={speed} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="cupScoringSpeed"
+                        value={speed}
+                        checked={formData.cupScoringSpeed === speed}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{speed}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  Can Flip Blocks?
+                </label>
+                <div className="space-y-2">
+                  {["yes", "no"].map((option) => (
+                    <label key={option} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="canFlipBlocks"
+                        value={option}
+                        checked={formData.canFlipBlocks === option}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  Can Flip Cups?
+                </label>
+                <div className="space-y-2">
+                  {["yes", "no"].map((option) => (
+                    <label key={option} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="canFlipCups"
+                        value={option}
+                        checked={formData.canFlipCups === option}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  Toggle Ability
+                </label>
+                <div className="space-y-2">
+                  {["yes", "no"].map((option) => (
+                    <label key={option} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="hasToggleAbility"
+                        value={option}
+                        checked={formData.hasToggleAbility === option}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+            </>
+          ) : (
+            <>
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  Does your robot have a Matchloader Intake?
+                </label>
+                <div className="space-y-2">
+                  {["yes", "no"].map((option) => (
+                    <label key={option} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="hasMatchloaderIntake"
+                        value={option}
+                        checked={formData.hasMatchloaderIntake === option}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {formData.hasMatchloaderIntake === "yes" && (
+                <div>
+                  <label className="block text-sm font-mono text-slate-300 mb-2">
+                    Matchloader Intake Speed
+                  </label>
+                  <div className="space-y-2">
+                    {["fast", "med", "slow"].map((speed) => (
+                      <label key={speed} className="flex items-center gap-3 cursor-pointer">
+                        <input
+                          type="radio"
+                          name="matchloaderSpeed"
+                          value={speed}
+                          checked={formData.matchloaderSpeed === speed}
+                          onChange={handleInputChange}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-slate-300 capitalize font-mono">{speed}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </>
           )}
 
           {error && (
@@ -333,13 +459,18 @@ export default function MyTeamForm({ initialData, onSave, onCancel }) {
     );
   }
 
-  // Step 4: Strategy and Capabilities
+  // Step 4: Strategy
   if (currentStep === 4) {
     return (
       <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
-        <h2 className="text-2xl font-bold font-mono text-white mb-6">
-          Set My Team - Strategy & Capabilities
-        </h2>
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold font-mono text-white">
+            Set My Team - Strategy
+          </h2>
+          <span className={`px-3 py-1 text-xs font-mono font-bold rounded uppercase tracking-wider ${isOverride ? "bg-purple-900/50 border border-purple-500 text-purple-300" : "bg-orange-900/50 border border-orange-500 text-orange-300"}`}>
+            {isOverride ? "26-27 Override" : "25-26 Push Back"}
+          </span>
+        </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
@@ -363,89 +494,93 @@ export default function MyTeamForm({ initialData, onSave, onCancel }) {
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-mono text-slate-300 mb-2">
-              Scoring Speed
-            </label>
-            <div className="space-y-2">
-              {["fast", "average", "slow", "none"].map((speed) => (
-                <label key={speed} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="scoringSpeed"
-                    value={speed}
-                    checked={formData.scoringSpeed === speed}
-                    onChange={handleInputChange}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-slate-300 capitalize font-mono">{speed}</span>
+          {!isOverride && (
+            <>
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  Scoring Speed
                 </label>
-              ))}
-            </div>
-          </div>
+                <div className="space-y-2">
+                  {["fast", "average", "slow", "none"].map((speed) => (
+                    <label key={speed} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="scoringSpeed"
+                        value={speed}
+                        checked={formData.scoringSpeed === speed}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{speed}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-sm font-mono text-slate-300 mb-2">
-              De-Scoring Capability
-            </label>
-            <div className="space-y-2">
-              {["yes", "no"].map((option) => (
-                <label key={option} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="deScoring"
-                    value={option}
-                    checked={formData.deScoring === option}
-                    onChange={handleInputChange}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-slate-300 capitalize font-mono">{option}</span>
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  De-Scoring Capability
                 </label>
-              ))}
-            </div>
-          </div>
+                <div className="space-y-2">
+                  {["yes", "no"].map((option) => (
+                    <label key={option} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="deScoring"
+                        value={option}
+                        checked={formData.deScoring === option}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-sm font-mono text-slate-300 mb-2">
-              Single Parking Capability
-            </label>
-            <div className="space-y-2">
-              {["yes", "no"].map((option) => (
-                <label key={option} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="singleParking"
-                    value={option}
-                    checked={formData.singleParking === option}
-                    onChange={handleInputChange}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-slate-300 capitalize font-mono">{option}</span>
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  Single Parking Capability
                 </label>
-              ))}
-            </div>
-          </div>
+                <div className="space-y-2">
+                  {["yes", "no"].map((option) => (
+                    <label key={option} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="singleParking"
+                        value={option}
+                        checked={formData.singleParking === option}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
 
-          <div>
-            <label className="block text-sm font-mono text-slate-300 mb-2">
-              Double Parking Capability
-            </label>
-            <div className="space-y-2">
-              {["yes", "no"].map((option) => (
-                <label key={option} className="flex items-center gap-3 cursor-pointer">
-                  <input
-                    type="radio"
-                    name="doubleParking"
-                    value={option}
-                    checked={formData.doubleParking === option}
-                    onChange={handleInputChange}
-                    className="w-4 h-4"
-                  />
-                  <span className="text-slate-300 capitalize font-mono">{option}</span>
+              <div>
+                <label className="block text-sm font-mono text-slate-300 mb-2">
+                  Double Parking Capability
                 </label>
-              ))}
-            </div>
-          </div>
+                <div className="space-y-2">
+                  {["yes", "no"].map((option) => (
+                    <label key={option} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="radio"
+                        name="doubleParking"
+                        value={option}
+                        checked={formData.doubleParking === option}
+                        onChange={handleInputChange}
+                        className="w-4 h-4"
+                      />
+                      <span className="text-slate-300 capitalize font-mono">{option}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
 
           {error && (
             <div className="bg-red-900/30 border border-red-700 rounded px-4 py-2 text-red-300 text-sm font-mono">

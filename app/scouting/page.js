@@ -1,5 +1,26 @@
 "use client";
 import { useState, useEffect } from "react";
+
+const formatCompetitionDate = (value) => {
+    if (!value) return "";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+        const [year, month, day] = value.split("-").map(Number);
+        return new Date(year, month - 1, day).toLocaleDateString(undefined, {
+            year: "numeric",
+            month: "short",
+            day: "numeric",
+        });
+    }
+
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) return value;
+
+    return parsed.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+    });
+};
 import CompetitionForm from "./components/CompetitionForm";
 import CompetitionView from "./components/CompetitionView";
 import { useAuth } from "@/context/AuthContext";
@@ -72,11 +93,12 @@ export default function ScoutingPage() {
             id,
             name: newCompetition.name,
             date: newCompetition.date,
+            gameMode: newCompetition.gameMode || "push_back",
             teamId: newCompetition.teamId || null,
             teams: [],
         };
         if (!newComp.teamId) delete newComp.teamId;
-        
+
         setCompetitions([...competitions, newComp]);
         setShowForm(false);
         if (user && db) {
@@ -256,14 +278,22 @@ export default function ScoutingPage() {
                                                 <h2 className="text-xl font-bold font-mono text-white group-hover:text-blue-400 transition-colors">
                                                     {competition.name}
                                                 </h2>
-                                                <p className="text-slate-400 text-sm font-mono mt-1">
-                                                    📅 {new Date(competition.date).toLocaleDateString()}
+                                                <div className="flex items-center gap-2 mt-1">
+                                                    <p className="text-slate-400 text-sm font-mono">
+                                                        📅 {formatCompetitionDate(competition.date)}
+                                                    </p>
+                                                    <span className={`px-2 py-0.5 text-[10px] font-mono font-bold rounded uppercase tracking-wider ${competition.gameMode === "override"
+                                                            ? "bg-purple-900/50 border border-purple-500/40 text-purple-400"
+                                                            : "bg-orange-900/50 border border-orange-500/40 text-orange-400"
+                                                        }`}>
+                                                        {competition.gameMode === "override" ? "Override" : "Push Back"}
+                                                    </span>
                                                     {competition.teamId && (
-                                                        <span className="ml-3 px-2 py-0.5 bg-emerald-900/40 text-emerald-400 text-xs rounded-full border border-emerald-500/30">
+                                                        <span className="px-2 py-0.5 bg-emerald-900/40 text-emerald-400 text-xs rounded-full border border-emerald-500/30">
                                                             Team Shared
                                                         </span>
                                                     )}
-                                                </p>
+                                                </div>
                                             </div>
                                         </div>
 

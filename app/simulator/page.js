@@ -182,6 +182,7 @@ export default function Home() {
   const [editName, setEditName] = useState("");
   const [activeScript, setActiveScript] = useState(null);
   const [alliance, setAlliance] = useState("red"); // "red" or "blue"
+  const [savedScriptTab, setSavedScriptTab] = useState("push_back");
 
   useEffect(() => {
     if (user === undefined) return; // wait for auth to initialize
@@ -228,15 +229,17 @@ export default function Home() {
     }
     setIsSaving(true);
     try {
+      const targetMode = savedScriptTab || gameMode;
       const docRef = await addDoc(collection(db, "scripts"), {
         userId: user.uid,
         name: saveName.trim(),
         code: codeText,
         alliance: alliance,
+        gameMode: targetMode,
         robotState: robotState,
         createdAt: serverTimestamp()
       });
-      const newScript = { id: docRef.id, name: saveName.trim(), code: codeText, alliance, robotState, createdAt: { toMillis: () => Date.now() } };
+      const newScript = { id: docRef.id, name: saveName.trim(), code: codeText, alliance, gameMode: targetMode, robotState, createdAt: { toMillis: () => Date.now() } };
       setSavedScripts([newScript, ...savedScripts]);
       setActiveScript(newScript);
       setSaveName("");
@@ -1082,7 +1085,7 @@ export default function Home() {
 
       if (normalizedLine === "pickupblock()" || normalizedLine === "pickup()") {
         if (gameMode === "override" && currentCarriedBlocks.length >= 1) {
-          setCurrentLine("Carrying capacity reached (max 1 block in Override)." );
+          setCurrentLine("Carrying capacity reached (max 1 block in Override).");
           return;
         }
 
@@ -1533,12 +1536,38 @@ export default function Home() {
 
         {/* SAVED SCRIPTS PANEL */}
         <div className="lg:col-span-2 flex flex-col gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-xl max-h-[850px]">
-          <h2 className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold mb-2">Saved Scripts</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold">Saved Scripts</h2>
+          </div>
 
-          <div className="flex flex-col gap-2 mb-4">
+          {/* Mode Tabs for Saved Scripts */}
+          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950 border border-slate-800 rounded-xl">
+            <button
+              type="button"
+              onClick={() => setSavedScriptTab("push_back")}
+              className={`py-1.5 px-2 rounded-lg font-mono text-[10px] font-bold uppercase transition-all ${savedScriptTab === "push_back"
+                  ? "bg-orange-500/20 text-orange-400 border border-orange-500/40 shadow"
+                  : "text-slate-500 hover:text-slate-400"
+                }`}
+            >
+              Push Back
+            </button>
+            <button
+              type="button"
+              onClick={() => setSavedScriptTab("override")}
+              className={`py-1.5 px-2 rounded-lg font-mono text-[10px] font-bold uppercase transition-all ${savedScriptTab === "override"
+                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/40 shadow"
+                  : "text-slate-500 hover:text-slate-400"
+                }`}
+            >
+              Override
+            </button>
+          </div>
+
+          <div className="flex flex-col gap-2 mb-2">
             <input
               type="text"
-              placeholder="Script name"
+              placeholder={`Name (${savedScriptTab === "override" ? "Override" : "Push Back"})`}
               value={saveName}
               onChange={(e) => setSaveName(e.target.value)}
               className="bg-slate-950 border border-slate-700 text-slate-300 font-mono text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
@@ -1554,75 +1583,83 @@ export default function Home() {
           </div>
 
           <div className="flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar">
-            {savedScripts.map((script) => (
-              <div
-                key={script.id}
-                className={`flex flex-col border rounded-lg overflow-hidden group ${activeScript?.id === script.id ? "bg-slate-800 border-emerald-500" : "bg-slate-950 border-slate-800"}`}
-              >
-                {editingId === script.id ? (
-                  <div className="p-3 flex items-center gap-2">
-                    <input
-                      type="text"
-                      autoFocus
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') saveEdit(script.id, e);
-                        if (e.key === 'Escape') setEditingId(null);
-                      }}
-                      className="flex-1 min-w-0 bg-slate-900 border border-emerald-500 text-slate-300 font-mono text-xs rounded px-2 py-1 focus:outline-none"
-                    />
-                    <button onClick={(e) => saveEdit(script.id, e)} className="text-emerald-400 hover:text-emerald-300">
-                      ✓
-                    </button>
-                    <button onClick={() => setEditingId(null)} className="text-slate-500 hover:text-slate-400">
-                      ✕
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={() => {
-                      setCodeText(script.code);
-                      if (script.alliance) setAlliance(script.alliance);
-                      if (script.robotState) {
-                        setRobotState(script.robotState);
-                        setRobotPath([script.robotState]);
-                      }
-                      setActiveScript(script);
-                    }}
-                    className="text-left p-3 hover:bg-slate-900/50 transition-colors"
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="flex items-start gap-2">
-                        {script.alliance && (
-                          <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${script.alliance === "red" ? "bg-red-500" : "bg-blue-500"}`} />
-                        )}
-                        <p className="text-emerald-400 font-mono text-xs font-bold whitespace-pre-wrap break-words text-left" title={script.name}>{script.name}</p>
-                      </div>
-                      <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <span
-                          onClick={(e) => startEdit(script, e)}
-                          className="text-slate-500 hover:text-blue-400 p-1"
-                          title="Rename"
-                        >
-                          ✎
-                        </span>
-                        <span
-                          onClick={(e) => deleteScript(script.id, e)}
-                          className="text-slate-500 hover:text-red-400 p-1"
-                          title="Delete"
-                        >
-                          🗑
-                        </span>
-                      </div>
+            {savedScripts
+              .filter((script) => (script.gameMode || "push_back") === savedScriptTab)
+              .map((script) => (
+                <div
+                  key={script.id}
+                  className={`flex flex-col border rounded-lg overflow-hidden group ${activeScript?.id === script.id ? "bg-slate-800 border-emerald-500" : "bg-slate-950 border-slate-800"}`}
+                >
+                  {editingId === script.id ? (
+                    <div className="p-3 flex items-center gap-2">
+                      <input
+                        type="text"
+                        autoFocus
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') saveEdit(script.id, e);
+                          if (e.key === 'Escape') setEditingId(null);
+                        }}
+                        className="flex-1 min-w-0 bg-slate-900 border border-emerald-500 text-slate-300 font-mono text-xs rounded px-2 py-1 focus:outline-none"
+                      />
+                      <button onClick={(e) => saveEdit(script.id, e)} className="text-emerald-400 hover:text-emerald-300">
+                        ✓
+                      </button>
+                      <button onClick={() => setEditingId(null)} className="text-slate-500 hover:text-slate-400">
+                        ✕
+                      </button>
                     </div>
-                    <p className="text-slate-500 font-mono text-[10px] mt-1 truncate">Click to load</p>
-                  </button>
-                )}
-              </div>
-            ))}
-            {savedScripts.length === 0 && user && (
-              <p className="text-slate-500 font-mono text-xs italic text-center mt-4">No saved scripts yet.</p>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setCodeText(script.code);
+                        if (script.alliance) setAlliance(script.alliance);
+                        if (script.gameMode) {
+                          setGameMode(script.gameMode);
+                          setSavedScriptTab(script.gameMode);
+                        }
+                        if (script.robotState) {
+                          setRobotState(script.robotState);
+                          setRobotPath([script.robotState]);
+                        }
+                        setActiveScript(script);
+                      }}
+                      className="text-left p-3 hover:bg-slate-900/50 transition-colors"
+                    >
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-2">
+                          {script.alliance && (
+                            <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${script.alliance === "red" ? "bg-red-500" : "bg-blue-500"}`} />
+                          )}
+                          <p className="text-emerald-400 font-mono text-xs font-bold whitespace-pre-wrap break-words text-left" title={script.name}>{script.name}</p>
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <span
+                            onClick={(e) => startEdit(script, e)}
+                            className="text-slate-500 hover:text-blue-400 p-1"
+                            title="Rename"
+                          >
+                            ✎
+                          </span>
+                          <span
+                            onClick={(e) => deleteScript(script.id, e)}
+                            className="text-slate-500 hover:text-red-400 p-1"
+                            title="Delete"
+                          >
+                            🗑
+                          </span>
+                        </div>
+                      </div>
+                      <p className="text-slate-500 font-mono text-[10px] mt-1 truncate">Click to load</p>
+                    </button>
+                  )}
+                </div>
+              ))}
+            {savedScripts.filter((script) => (script.gameMode || "push_back") === savedScriptTab).length === 0 && user && (
+              <p className="text-slate-500 font-mono text-xs italic text-center mt-4">
+                No {savedScriptTab === "override" ? "Override" : "Push Back"} scripts saved yet.
+              </p>
             )}
           </div>
         </div>
@@ -1635,40 +1672,32 @@ export default function Home() {
             <h1 className="text-2xl font-black text-white tracking-tight font-mono uppercase">
               Autonomous Simulator
             </h1>
-            <p className={`text-xs font-bold uppercase tracking-wider font-mono mt-1 ${gameMode === "override" ? "text-purple-400" : "text-amber-400"}`}>
+            <p className={`text-xs font-bold uppercase tracking-wider font-mono mt-1 ${gameMode === "override" ? "text-purple-400" : "text-orange-400"}`}>
               {gameMode === "override" ? "Optimized for Override Auton" : "Optimized for Push Back Auton"}
             </p>
           </div>
 
-          {/* GAME MODE SELECTION */}
+          {/* GAME MODE SELECTION DROPDOWN */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 font-mono">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-mono">
               Select Game Mode
             </label>
-            <div className="grid grid-cols-2 gap-4">
-              <button
-                type="button"
-                onClick={() => setGameMode("push_back")}
-                disabled={isSimulating}
-                className={`py-4 rounded-xl font-mono text-sm font-black uppercase tracking-wider transition-all border shadow-lg ${gameMode === "push_back"
-                  ? "bg-amber-600/20 border-amber-500 text-amber-400 ring-2 ring-amber-500/30"
-                  : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-400 hover:border-slate-700"
-                  }`}
-              >
-                25-26 Push Back
-              </button>
-              <button
-                type="button"
-                onClick={() => setGameMode("override")}
-                disabled={isSimulating}
-                className={`py-4 rounded-xl font-mono text-sm font-black uppercase tracking-wider transition-all border shadow-lg ${gameMode === "override"
-                  ? "bg-purple-600/20 border-purple-500 text-purple-400 ring-2 ring-purple-500/30"
-                  : "bg-slate-950 border-slate-800 text-slate-500 hover:text-slate-400 hover:border-slate-700"
-                  }`}
-              >
-                26-27 Override
-              </button>
-            </div>
+            <select
+              value={gameMode}
+              onChange={(e) => {
+                const newMode = e.target.value;
+                setGameMode(newMode);
+                setSavedScriptTab(newMode);
+              }}
+              disabled={isSimulating}
+              className={`w-full py-3.5 px-4 rounded-xl font-mono text-sm font-bold uppercase tracking-wider transition-all border shadow-lg cursor-pointer focus:outline-none ${gameMode === "override"
+                  ? "bg-slate-950 border-purple-500 text-purple-400 focus:border-purple-400 ring-1 ring-purple-500/30"
+                  : "bg-slate-950 border-orange-500 text-orange-400 focus:border-orange-400 ring-1 ring-orange-500/30"
+                }`}
+            >
+              <option value="push_back" className="bg-slate-900 text-orange-400 font-mono font-bold">25-26 Push Back</option>
+              <option value="override" className="bg-slate-900 text-purple-400 font-mono font-bold">26-27 Override</option>
+            </select>
           </div>
 
           {/* ALLIANCE SELECTION TOGGLE BOXES */}
@@ -1733,7 +1762,7 @@ export default function Home() {
               onClick={() => setAllowRotation((current) => !current)}
               disabled={isSimulating}
               className={`py-3 px-4 rounded-xl font-bold transition-all font-mono text-sm uppercase tracking-wide border ${allowRotation
-                ? "bg-amber-500 text-slate-950 border-amber-400"
+                ? "bg-orange-500 text-slate-950 border-orange-400"
                 : "bg-slate-950 border-slate-700 text-slate-300 hover:border-slate-600"
                 }`}
             >
@@ -1778,7 +1807,7 @@ export default function Home() {
                   <p className="text-[18px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold">Score Tally</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-3xl font-black text-amber-300">{totalScore}</p>
+                  <p className={`text-3xl font-black ${gameMode === "override" ? "text-purple-300" : "text-orange-300"}`}>{totalScore}</p>
                   <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500 font-mono">Total</p>
                 </div>
               </div>
@@ -1796,7 +1825,7 @@ export default function Home() {
                     </div>
                     <div className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2">
                       <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500 font-mono">Parking Zone Cleared</p>
-                      <p className="mt-2 text-2xl font-black text-amber-300">{parkingZoneScore}</p>
+                      <p className={`mt-2 text-2xl font-black ${gameMode === "override" ? "text-purple-300" : "text-orange-300"}`}>{parkingZoneScore}</p>
                     </div>
                     <div className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2">
                       <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500 font-mono">Parking Bonus</p>
@@ -1809,53 +1838,111 @@ export default function Home() {
 
             {/* LOGGER SYSTEM */}
             <div className="bg-slate-900 border border-slate-800 px-4 py-3 rounded-xl font-mono text-xs flex gap-3 items-center shadow-md">
-              <span className={`w-2 h-2 rounded-full ${isSimulating ? "bg-amber-400 animate-pulse" : "bg-emerald-400"}`} />
+              <span className={`w-2 h-2 rounded-full ${isSimulating ? (gameMode === "override" ? "bg-purple-400 animate-pulse" : "bg-orange-400 animate-pulse") : "bg-emerald-400"}`} />
               <span className="text-slate-500 font-black tracking-wider uppercase">Console:</span>
               <span className="text-slate-300 truncate">{currentLine}</span>
             </div>
 
             {/* LOADER BLOCKS KEY — Push Back only */}
-            {gameMode !== "override" && (
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
-              <p className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold mb-3">Loader Blocks Key</p>
-              <div className="flex justify-around items-center bg-slate-950 border border-slate-800 rounded-xl p-4">
+            {gameMode !== "override" ? (
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+                <p className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold mb-3">Loader Blocks Key</p>
+                <div className="flex justify-around items-center bg-slate-950 border border-slate-800 rounded-xl p-4">
 
-                {/* Left Key Item */}
-                <div className="flex items-center gap-6">
-                  <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md flex flex-col flex-shrink-0">
-                    <div className="w-full h-1/2 bg-[#ef4444]" />
-                    <div className="w-full h-1/2 bg-[#3b82f6]" />
+                  {/* Left Key Item */}
+                  <div className="flex items-center gap-6">
+                    <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md flex flex-col flex-shrink-0">
+                      <div className="w-full h-1/2 bg-[#ef4444]" />
+                      <div className="w-full h-1/2 bg-[#3b82f6]" />
+                    </div>
+                    <div className="text-slate-500 font-bold text-lg">➔</div>
+                    <div className="flex flex-col gap-0.5 border border-slate-800 p-1.5 bg-slate-900 rounded-lg shadow-inner flex-shrink-0">
+                      <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
+                    </div>
                   </div>
-                  <div className="text-slate-500 font-bold text-lg">➔</div>
-                  <div className="flex flex-col gap-0.5 border border-slate-800 p-1.5 bg-slate-900 rounded-lg shadow-inner flex-shrink-0">
-                    <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
+
+                  {/* Right Key Item */}
+                  <div className="flex items-center gap-6">
+                    <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md flex flex-col flex-shrink-0">
+                      <div className="w-full h-1/2 bg-[#3b82f6]" />
+                      <div className="w-full h-1/2 bg-[#ef4444]" />
+                    </div>
+                    <div className="text-slate-500 font-bold text-lg">➔</div>
+                    <div className="flex flex-col gap-0.5 border border-slate-800 p-1.5 bg-slate-900 rounded-lg shadow-inner flex-shrink-0">
+                      <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
+                      <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
+                    </div>
                   </div>
+
                 </div>
-
-                {/* Right Key Item */}
-                <div className="flex items-center gap-6">
-                  <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-white shadow-md flex flex-col flex-shrink-0">
-                    <div className="w-full h-1/2 bg-[#3b82f6]" />
-                    <div className="w-full h-1/2 bg-[#ef4444]" />
-                  </div>
-                  <div className="text-slate-500 font-bold text-lg">➔</div>
-                  <div className="flex flex-col gap-0.5 border border-slate-800 p-1.5 bg-slate-900 rounded-lg shadow-inner flex-shrink-0">
-                    <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#3b82f6] border border-[#1e40af] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
-                    <div className="w-12 h-3 bg-[#ef4444] border border-[#991b1b] rounded-sm" />
-                  </div>
-                </div>
-
               </div>
-            </div>
+            ) : (
+              <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
+                <p className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold mb-3">Override Cup Key</p>
+                <div className="flex justify-around items-center bg-slate-950 border border-slate-800 rounded-xl p-4">
+
+                  {/* Key Item 1: White Top Cup */}
+                  <div className="flex items-center gap-5">
+                    {/* Top view 2D marker */}
+                    <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-slate-700 shadow-md flex flex-col flex-shrink-0">
+                      <div className="w-full h-1/2 bg-[#f8fafc]" />
+                      <div className="w-full h-1/2 bg-[#475569]" />
+                    </div>
+                    <div className="text-slate-400 font-black text-xl font-mono">=</div>
+                    {/* 3D Hourglass Cup Diagram */}
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <svg width="36" height="52" viewBox="0 0 36 52" className="drop-shadow-md">
+                        {/* Top flared half - White */}
+                        <path d="M 4 4 L 32 4 L 24 26 L 12 26 Z" fill="#f8fafc" stroke="#334155" strokeWidth="1.5" />
+                        {/* Cup inner ridges visual detail */}
+                        <line x1="12" y1="4" x2="16" y2="26" stroke="#cbd5e1" strokeWidth="1" />
+                        <line x1="24" y1="4" x2="20" y2="26" stroke="#cbd5e1" strokeWidth="1" />
+                        {/* Bottom flared half - Gray */}
+                        <path d="M 12 26 L 24 26 L 32 48 L 4 48 Z" fill="#475569" stroke="#1e293b" strokeWidth="1.5" />
+                        <line x1="16" y1="26" x2="12" y2="48" stroke="#334155" strokeWidth="1" />
+                        <line x1="20" y1="26" x2="24" y2="48" stroke="#334155" strokeWidth="1" />
+                        {/* Center waist seam */}
+                        <line x1="11" y1="26" x2="25" y2="26" stroke="#0f172a" strokeWidth="2" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Key Item 2: Gray Top Cup (Inverted) */}
+                  <div className="flex items-center gap-5">
+                    {/* Top view 2D marker */}
+                    <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-slate-700 shadow-md flex flex-col flex-shrink-0">
+                      <div className="w-full h-1/2 bg-[#475569]" />
+                      <div className="w-full h-1/2 bg-[#f8fafc]" />
+                    </div>
+                    <div className="text-slate-400 font-black text-xl font-mono">=</div>
+                    {/* 3D Hourglass Cup Diagram */}
+                    <div className="flex flex-col items-center flex-shrink-0">
+                      <svg width="36" height="52" viewBox="0 0 36 52" className="drop-shadow-md">
+                        {/* Top flared half - Gray */}
+                        <path d="M 4 4 L 32 4 L 24 26 L 12 26 Z" fill="#475569" stroke="#1e293b" strokeWidth="1.5" />
+                        <line x1="12" y1="4" x2="16" y2="26" stroke="#334155" strokeWidth="1" />
+                        <line x1="24" y1="4" x2="20" y2="26" stroke="#334155" strokeWidth="1" />
+                        {/* Bottom flared half - White */}
+                        <path d="M 12 26 L 24 26 L 32 48 L 4 48 Z" fill="#f8fafc" stroke="#334155" strokeWidth="1.5" />
+                        <line x1="16" y1="26" x2="12" y2="48" stroke="#cbd5e1" strokeWidth="1" />
+                        <line x1="20" y1="26" x2="24" y2="48" stroke="#cbd5e1" strokeWidth="1" />
+                        {/* Center waist seam */}
+                        <line x1="11" y1="26" x2="25" y2="26" stroke="#0f172a" strokeWidth="2" />
+                      </svg>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
             )}
           </div>
         </div>

@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
 import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
-import { auth, googleProvider } from "@/lib/firebase";
+import { auth, googleProvider, hasFirebaseConfig } from "@/lib/firebase";
 
 const AuthContext = createContext(null);
 
@@ -44,13 +44,14 @@ function requireAuth() {
 }
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(undefined); // undefined = loading, null = signed out
-  const [profile, setProfile] = useState(undefined); // undefined = loading, null = needs onboarding
+  const [user, setUser] = useState(hasFirebaseConfig ? undefined : null); // undefined = loading, null = signed out
+  const [profile, setProfile] = useState(hasFirebaseConfig ? undefined : null); // undefined = loading, null = needs onboarding
+  const [authError, setAuthError] = useState(
+    hasFirebaseConfig ? null : "Firebase configuration is missing or invalid. Please set the NEXT_PUBLIC_FIREBASE_* environment variables and redeploy."
+  );
 
   useEffect(() => {
-    if (!auth) {
-      setUser(null);
-      setProfile(null);
+    if (!hasFirebaseConfig || !auth) {
       return undefined;
     }
 
@@ -61,8 +62,19 @@ export function AuthProvider({ children }) {
     return () => unsubscribe();
   }, []);
 
-  const signInWithGoogle = () => signInWithPopup(requireAuth(), googleProvider);
-  const signUpWithGoogle = () => signInWithPopup(requireAuth(), googleProvider);
+  const signInWithGoogle = async () => {
+    if (!hasFirebaseConfig) {
+      throw new Error("Firebase is not configured. Please set NEXT_PUBLIC_FIREBASE_* environment variables.");
+    }
+    return signInWithPopup(requireAuth(), googleProvider);
+  };
+
+  const signUpWithGoogle = async () => {
+    if (!hasFirebaseConfig) {
+      throw new Error("Firebase is not configured. Please set NEXT_PUBLIC_FIREBASE_* environment variables.");
+    }
+    return signInWithPopup(requireAuth(), googleProvider);
+  };
   const logout = () => signOut(requireAuth());
   const saveProfile = (profileData) => {
     if (!user) {
@@ -85,6 +97,8 @@ export function AuthProvider({ children }) {
       value={{
         user,
         profile,
+        hasFirebaseConfig,
+        authError,
         isAuthLoading: user === undefined || (user && profile === undefined),
         signInWithGoogle,
         signUpWithGoogle,
