@@ -6,7 +6,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
 
 function NavBar() {
-  const { user, profile, logout } = useAuth();
+  const { user, profile, logout, isGuest } = useAuth();
   const router = useRouter();
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
@@ -42,12 +42,21 @@ function NavBar() {
       </Link>
 
       <nav className="flex items-center gap-5">
+        {isGuest && (
+          <div className="px-3 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-[10px] font-mono font-bold uppercase tracking-wider text-amber-200">
+            Guest View — not saved
+          </div>
+        )}
+
         <Link
           href="/simulator"
           className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 hover:text-red-400 transition-colors"
         >
           Simulator
         </Link>
+
+        <p>|</p>
+
         <Link
           href="/scouting"
           className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 hover:text-blue-400 transition-colors"
@@ -55,6 +64,15 @@ function NavBar() {
           Scouting
         </Link>
 
+        <p>|</p>
+
+        <Link
+        href="/team"
+        className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 hover:text-blue-400 transition-colors"
+        >
+          Team Workspace
+        </Link>
+        
         {user && (
           <div className="relative flex items-center border-l border-slate-800 pl-5 ml-2" ref={dropdownRef}>
             <button

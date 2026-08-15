@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 
 export default function LoginPage() {
-  const { user, profile, isAuthLoading, hasFirebaseConfig, authError, signInWithGoogle, signUpWithGoogle } = useAuth();
+  const { user, profile, isAuthLoading, hasFirebaseConfig, authError, signInWithGoogle, signUpWithGoogle, enterGuestMode, isGuest } = useAuth();
   const router = useRouter();
   const [errorMessage, setErrorMessage] = useState("");
   const [pendingAction, setPendingAction] = useState("");
@@ -43,6 +43,12 @@ export default function LoginPage() {
     } finally {
       setPendingAction("");
     }
+  };
+
+  const handleGuestMode = () => {
+    setErrorMessage("");
+    enterGuestMode();
+    router.replace("/");
   };
 
   if (!hasFirebaseConfig && !isAuthLoading) {
@@ -160,6 +166,19 @@ export default function LoginPage() {
               {errorMessage}
             </p>
           )}
+
+          <button
+            onClick={handleGuestMode}
+            className="mt-3 w-full flex items-center justify-center border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 font-bold py-3.5 px-6 rounded-2xl transition-all duration-200 shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98]"
+          >
+            <span className="font-mono text-sm font-black tracking-wide">
+              Continue as Guest
+            </span>
+          </button>
+
+          <div className="mt-4 rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-center text-[11px] font-mono text-amber-200">
+            Guest preview mode: your activity is for demo use only and will not be saved.
+          </div>
 
           {/* Footer note */}
           <p className="text-center text-[11px] text-slate-600 font-mono mt-5 leading-relaxed">

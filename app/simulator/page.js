@@ -186,26 +186,74 @@ export default function Home() {
 
   useEffect(() => {
     if (user === undefined) return; // wait for auth to initialize
-    if (!user || !db) {
+    if (!user || !db || user.isGuest) {
       setSavedScripts([]);
       return;
     }
     const loadScripts = async () => {
       try {
-        const q = query(
+        const scriptsMap = new Map();
+
+        // 1. Load user's personal scripts from Firestore
+        const qPersonal = query(
           collection(db, "scripts"),
           where("userId", "==", user.uid)
         );
-        const querySnapshot = await getDocs(q);
-        const scripts = [];
-        querySnapshot.forEach((document) => {
-          scripts.push({ id: document.id, ...document.data() });
+        const personalSnapshot = await getDocs(qPersonal);
+        personalSnapshot.forEach((docSnap) => {
+          scriptsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
         });
+
+        // 2. Load teams user belongs to
+        const tq = query(
+          collection(db, "teams"),
+          where("members", "array-contains", user.uid)
+        );
+        const teamSnap = await getDocs(tq);
+        const teamIds = [];
+        teamSnap.forEach((docSnap) => teamIds.push(docSnap.id));
+
+        // 3. Load shared code from team messages
+        if (teamIds.length > 0) {
+          for (const tId of teamIds) {
+            try {
+              const qMsg = query(
+                collection(db, "team_messages"),
+                where("teamId", "==", tId)
+              );
+              const msgSnapshot = await getDocs(qMsg);
+              msgSnapshot.forEach((docSnap) => {
+                const msgData = docSnap.data();
+                if (msgData.codeShare) {
+                  const shareId = `shared_${docSnap.id}`;
+                  if (!scriptsMap.has(shareId)) {
+                    scriptsMap.set(shareId, {
+                      id: shareId,
+                      userId: msgData.senderId,
+                      authorName: msgData.senderName,
+                      name: msgData.codeShare.scriptName,
+                      code: msgData.codeShare.code,
+                      alliance: msgData.codeShare.alliance || "red",
+                      gameMode: msgData.codeShare.gameMode || "push_back",
+                      isTeamShared: true, // Only team-shared code gets isTeamShared
+                      createdAt: msgData.createdAt
+                    });
+                  }
+                }
+              });
+            } catch (e) {
+              console.warn("Could not fetch team messages for team:", tId, e);
+            }
+          }
+        }
+
+        const scripts = Array.from(scriptsMap.values());
         scripts.sort((a, b) => {
-          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : Date.now();
-          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : Date.now();
+          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : (typeof a.createdAt === 'number' ? a.createdAt : Date.now()));
+          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : (typeof b.createdAt === 'number' ? b.createdAt : Date.now()));
           return timeB - timeA;
         });
+
         setSavedScripts(scripts);
       } catch (error) {
         console.error("Error loading scripts:", error);
@@ -219,6 +267,10 @@ export default function Home() {
       alert("Please log in to save scripts.");
       return;
     }
+    if (user.isGuest) {
+      alert("Guest preview mode: this script will not be saved. Sign in to save your work permanently.");
+      return;
+    }
     if (!saveName.trim()) {
       alert("Please provide a name for the script.");
       return;
@@ -230,22 +282,40 @@ export default function Home() {
     setIsSaving(true);
     try {
       const targetMode = savedScriptTab || gameMode;
-      const docRef = await addDoc(collection(db, "scripts"), {
+      const cleanRobotState = robotState ? {
+        x: Number(robotState.x) || 100,
+        y: Number(robotState.y) || 450,
+        angle: Number(robotState.angle) || 0
+      } : null;
+
+      const docData = {
         userId: user.uid,
         name: saveName.trim(),
         code: codeText,
-        alliance: alliance,
+        alliance: alliance || "red",
         gameMode: targetMode,
-        robotState: robotState,
+        robotState: cleanRobotState,
         createdAt: serverTimestamp()
-      });
-      const newScript = { id: docRef.id, name: saveName.trim(), code: codeText, alliance, gameMode: targetMode, robotState, createdAt: { toMillis: () => Date.now() } };
-      setSavedScripts([newScript, ...savedScripts]);
+      };
+
+      const docRef = await addDoc(collection(db, "scripts"), docData);
+      const newScript = {
+        id: docRef.id,
+        userId: user.uid,
+        name: saveName.trim(),
+        code: codeText,
+        alliance: alliance || "red",
+        gameMode: targetMode,
+        robotState: cleanRobotState,
+        createdAt: Date.now()
+      };
+
+      setSavedScripts((prev) => [newScript, ...prev.filter(s => s.id !== docRef.id)]);
       setActiveScript(newScript);
       setSaveName("");
     } catch (error) {
       console.error("Error saving script:", error);
-      alert("Failed to save script.");
+      alert("Failed to save script: " + (error.message || error));
     }
     setIsSaving(false);
   };
@@ -1632,7 +1702,14 @@ export default function Home() {
                           {script.alliance && (
                             <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${script.alliance === "red" ? "bg-red-500" : "bg-blue-500"}`} />
                           )}
-                          <p className="text-emerald-400 font-mono text-xs font-bold whitespace-pre-wrap break-words text-left" title={script.name}>{script.name}</p>
+                          <p className="text-emerald-400 font-mono text-xs font-bold whitespace-pre-wrap break-words text-left flex items-center gap-1.5 flex-wrap" title={script.name}>
+                            <span>{script.name}</span>
+                            {script.isTeamShared && (
+                              <span className="text-slate-400 font-normal text-[10px] bg-slate-800/80 border border-slate-700 px-1 py-0.2 rounded font-mono">
+                                (shared)
+                              </span>
+                            )}
+                          </p>
                         </div>
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <span
@@ -1665,7 +1742,7 @@ export default function Home() {
         </div>
 
         {/* CONTROL DECK CODE TERMINAL */}
-        <div className="lg:col-span-4 flex flex-col gap-6 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
+        <div className="lg:col-span-4 flex flex-col gap-3 bg-slate-900 border border-slate-800 p-6 rounded-2xl shadow-xl">
 
           {/* SIMULATOR TITLE */}
           <div className="border-b border-slate-800 pb-4">
@@ -1679,7 +1756,7 @@ export default function Home() {
 
           {/* GAME MODE SELECTION DROPDOWN */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-mono">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-1 font-mono">
               Select Game Mode
             </label>
             <select
@@ -1702,7 +1779,7 @@ export default function Home() {
 
           {/* ALLIANCE SELECTION TOGGLE BOXES */}
           <div>
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-3 font-mono">
+            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-mono">
               Select Your Alliance
             </label>
             <div className="grid grid-cols-2 gap-4">
@@ -1731,57 +1808,59 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col">
-            <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-mono flex items-center justify-between">
-              <span>Script Editor</span>
-              {activeScript && (
-                <span className="text-emerald-400 text-[10px] bg-emerald-950/50 px-2 py-1 rounded border border-emerald-500/30 truncate max-w-[200px]">
-                  Current: {activeScript.name}
-                </span>
-              )}
-            </label>
-            <p className="text-[13px] text-slate-400 font-mono mb-3 leading-tight">
-              <strong>Path Editor:</strong> Drag the robot to position it and click <strong>Rotation</strong> to adjust its heading.
-              All <em>DriveFor()</em> measurements are in inches; <em>turnLeft/Right()</em> use degrees.
-              {gameMode === "override"
-                ? " Override commands: pickupBlock(), pickupCup(), placeBlock(), placeCup(), flipBlock(), flipCup(), toggle()."
-                : " Push Back commands: pickupBlock(), placeBlock(), DriveFor(), turnLeft(), turnRight."}
-            </p>
-            <textarea
-              value={codeText}
-              onChange={(e) => setCodeText(e.target.value)}
-              disabled={isSimulating}
-              rows={10}
-              className="w-full flex-1 bg-slate-950 border border-slate-700 rounded-xl p-4 font-mono text-sm text-emerald-400 focus:outline-none focus:border-red-500 resize-none leading-relaxed tracking-wide shadow-inner min-h-[250px]"
-            />
-          </div>
+          <div className="flex-1 flex flex-col gap-0">
+            <div>
+              <label className="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 font-mono flex items-center justify-between">
+                <span>Script Editor</span>
+                {activeScript && (
+                  <span className="text-emerald-400 text-[10px] bg-emerald-950/50 px-2 py-1 rounded border border-emerald-500/30 truncate max-w-[200px]">
+                    Current: {activeScript.name}
+                  </span>
+                )}
+              </label>
+              <p className="text-[13px] text-slate-400 font-mono mb-3 leading-tight">
+                <strong>Path Editor:</strong> Drag the robot to position it and click <strong>Rotation</strong> to adjust its heading.
+                All <em>DriveFor()</em> measurements are in inches; <em>turnLeft/Right()</em> use degrees.
+                {gameMode === "override"
+                  ? " Override commands: pickupBlock(), pickupCup(), placeBlock(), placeCup(), flipBlock(), flipCup(), toggle()."
+                  : " Push Back commands: pickupBlock(), placeBlock(), DriveFor(), turnLeft(), turnRight."}
+              </p>
+              <textarea
+                value={codeText}
+                onChange={(e) => setCodeText(e.target.value)}
+                disabled={isSimulating}
+                rows={10}
+                className="w-full bg-slate-950 border border-slate-700 rounded-xl p-4 font-mono text-sm text-emerald-400 focus:outline-none focus:border-red-500 resize-y leading-relaxed tracking-wide shadow-inner min-h-[250px]"
+              />
+            </div>
 
-          <div className="grid grid-cols-2 gap-4">
-            <button
-              type="button"
-              onClick={() => setAllowRotation((current) => !current)}
-              disabled={isSimulating}
-              className={`py-3 px-4 rounded-xl font-bold transition-all font-mono text-sm uppercase tracking-wide border ${allowRotation
-                ? "bg-orange-500 text-slate-950 border-orange-400"
-                : "bg-slate-950 border-slate-700 text-slate-300 hover:border-slate-600"
-                }`}
-            >
-              {allowRotation ? "Rotation: ON" : "Rotation: OFF"}
-            </button>
-            <button
-              onClick={runSimulation}
-              disabled={isSimulating}
-              className="bg-red-500 hover:bg-red-600 disabled:bg-slate-800 text-white py-3 px-4 rounded-xl font-bold transition-all font-mono text-sm uppercase tracking-wide shadow-lg"
-            >
-              {isSimulating ? "Running..." : "▶ Run Path"}
-            </button>
-            <button
-              onClick={resetSimulation}
-              disabled={isSimulating}
-              className="bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-400 py-3 px-4 rounded-xl font-bold transition-all font-mono text-sm uppercase tracking-wide"
-            >
-              🔄 Clear Map
-            </button>
+            <div className="grid grid-cols-2 gap-4 mt-4">
+              <button
+                type="button"
+                onClick={() => setAllowRotation((current) => !current)}
+                disabled={isSimulating}
+                className={`py-3 px-4 rounded-xl font-bold transition-all font-mono text-sm uppercase tracking-wide border ${allowRotation
+                  ? "bg-orange-500 text-slate-950 border-orange-400"
+                  : "bg-slate-950 border-slate-700 text-slate-300 hover:border-slate-600"
+                  }`}
+              >
+                {allowRotation ? "Rotation: ON" : "Rotation: OFF"}
+              </button>
+              <button
+                onClick={runSimulation}
+                disabled={isSimulating}
+                className="bg-red-500 hover:bg-red-600 disabled:bg-slate-800 text-white py-3 px-4 rounded-xl font-bold transition-all font-mono text-sm uppercase tracking-wide shadow-lg"
+              >
+                {isSimulating ? "Running..." : "▶ Run Path"}
+              </button>
+              <button
+                onClick={resetSimulation}
+                disabled={isSimulating}
+                className="bg-slate-950 hover:bg-slate-800 border border-slate-700 text-slate-400 py-3 px-4 rounded-xl font-bold transition-all font-mono text-sm uppercase tracking-wide col-span-2"
+              >
+                🔄 Clear Map
+              </button>
+            </div>
           </div>
         </div>
 
@@ -1812,26 +1891,26 @@ export default function Home() {
                 </div>
               </div>
 
-              <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-4 grid gap-3 text-sm">
                 <div className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2">
                   <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500 font-mono">{gameMode === "override" ? "Override Score" : "Blocks Scored"}</p>
                   <p className="mt-2 text-2xl font-black text-emerald-300">{gameMode === "override" ? overrideScore : blocksScored}</p>
                 </div>
                 {gameMode !== "override" && (
-                  <>
+                  <div className="grid grid-cols-3 gap-3">
                     <div className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2">
                       <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500 font-mono">Loaders Cleared</p>
                       <p className="mt-2 text-2xl font-black text-cyan-300">{clearedLoaders}</p>
                     </div>
                     <div className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2">
-                      <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500 font-mono">Parking Zone Cleared</p>
+                      <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500 font-mono">Parking Zone</p>
                       <p className={`mt-2 text-2xl font-black ${gameMode === "override" ? "text-purple-300" : "text-orange-300"}`}>{parkingZoneScore}</p>
                     </div>
                     <div className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2">
                       <p className="text-[11px] uppercase tracking-[0.3em] text-slate-500 font-mono">Parking Bonus</p>
                       <p className="mt-2 text-2xl font-black text-fuchsia-300">{parkedScore}</p>
                     </div>
-                  </>
+                  </div>
                 )}
               </div>
             </div>

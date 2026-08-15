@@ -75,10 +75,47 @@ export function AuthProvider({ children }) {
     }
     return signInWithPopup(requireAuth(), googleProvider);
   };
-  const logout = () => signOut(requireAuth());
+
+  const enterGuestMode = () => {
+    const guestUser = {
+      uid: "guest-user",
+      displayName: "Guest User",
+      email: "guest@vexcentral.app",
+      photoURL: null,
+      isGuest: true,
+    };
+
+    const guestProfile = {
+      name: "Guest User",
+      preferredName: "Guest",
+      teamName: "Guest Preview",
+      completedOnboarding: true,
+      isGuest: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    setUser(guestUser);
+    setProfile(guestProfile);
+    setAuthError(null);
+  };
+
+  const logout = async () => {
+    if (user?.isGuest) {
+      setUser(null);
+      setProfile(null);
+      return;
+    }
+
+    await signOut(requireAuth());
+  };
+
   const saveProfile = (profileData) => {
     if (!user) {
       throw new Error("You must be signed in to save your profile.");
+    }
+
+    if (user.isGuest) {
+      throw new Error("Guest preview mode does not save profile changes.");
     }
 
     const savedProfile = saveStoredProfile(user.uid, {
@@ -99,9 +136,11 @@ export function AuthProvider({ children }) {
         profile,
         hasFirebaseConfig,
         authError,
+        isGuest: Boolean(user?.isGuest),
         isAuthLoading: user === undefined || (user && profile === undefined),
         signInWithGoogle,
         signUpWithGoogle,
+        enterGuestMode,
         saveProfile,
         logout,
       }}

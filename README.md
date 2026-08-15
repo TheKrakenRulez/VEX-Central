@@ -9,10 +9,10 @@ A comprehensive scouting, collaboration, and autonomous simulation platform desi
 
 
 ## Overview
-VEX Central solves a major challenge for competitive robotics teams: organizing scouting data, coordinating alliance strategy, and validating autonomous routines are often scattered across spreadsheets, various chatting apps, and separate simulators.
+VEX Central solves a major challenge for competitive robotics teams: organizing various team scouting data, coordinating alliance strategies, and testing autonomous routines are often scattered across spreadsheets, various chatting apps, and expensive, subscription only simulators that are rarely accessible to students without educator backing. Furthermore, finding reliable alliance partners among a massive variety of competing teams is extremely difficult. 
 
 
-This project brings those capabilities together in one polished app. Teams can create competitions, assign match scouting tasks, compare team performance, and simulate autonomous routines all in one place.
+This project tackles these issues by bringing all of these features together into one unified app. VEX Central not only provides students with a free, accessible autonomous simulator and team workspace, but it also aids in building a data set of team performances to help you analyze opponents, coordinate strategies, and pick the best alliance partners for your individual robot.
 
 
 ## Core Features

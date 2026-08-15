@@ -3,7 +3,7 @@
 import { useState, useEffect, use } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ChatBox from "../components/ChatBox";
@@ -16,6 +16,7 @@ export default function TeamWorkspacePage({ params }) {
   const [team, setTeam] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showManageModal, setShowManageModal] = useState(false);
+  const [savedScripts, setSavedScripts] = useState([]);
 
   useEffect(() => {
     if (user === undefined) return;
@@ -45,6 +46,25 @@ export default function TeamWorkspacePage({ params }) {
       }
     };
     fetchTeam();
+
+    // Fetch user's saved scripts
+    const fetchScripts = async () => {
+      try {
+        const q = query(
+          collection(db, "scripts"),
+          where("userId", "==", user.uid)
+        );
+        const querySnapshot = await getDocs(q);
+        const scripts = [];
+        querySnapshot.forEach((doc) => {
+          scripts.push({ id: doc.id, ...doc.data() });
+        });
+        setSavedScripts(scripts);
+      } catch (err) {
+        console.error("Error fetching scripts:", err);
+      }
+    };
+    fetchScripts();
   }, [user, teamId, router]);
 
   if (loading) {
@@ -104,8 +124,10 @@ export default function TeamWorkspacePage({ params }) {
         </div>
       </div>
 
-      <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden flex flex-col min-h-[500px] shadow-2xl">
-        <ChatBox team={team} user={user} />
+      <div className="flex-1 flex gap-4 min-h-[500px]">
+        <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+          <ChatBox team={team} user={user} savedScripts={savedScripts} />
+        </div>
       </div>
 
       {showManageModal && (

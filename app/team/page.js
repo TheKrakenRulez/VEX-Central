@@ -52,6 +52,10 @@ export default function TeamHubPage() {
   const handleCreateTeam = async (e) => {
     e.preventDefault();
     if (!createTeamName.trim() || !user) return;
+    if (user.isGuest) {
+      alert("Guest preview mode: teams are not saved. Sign in to create and keep team workspaces.");
+      return;
+    }
     const code = generateJoinCode();
     try {
       const docRef = await addDoc(collection(db, "teams"), {
@@ -78,6 +82,10 @@ export default function TeamHubPage() {
     e.preventDefault();
     setJoinError("");
     if (!joinCode.trim() || !user) return;
+    if (user.isGuest) {
+      alert("Guest preview mode: team memberships are not saved. Sign in to join and keep teams.");
+      return;
+    }
 
     try {
       const q = query(collection(db, "teams"), where("joinCode", "==", joinCode.trim().toUpperCase()));

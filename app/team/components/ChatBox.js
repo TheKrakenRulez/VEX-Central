@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc } from "firebase/firestore";
 
-export default function ChatBox({ team, user }) {
+export default function ChatBox({ team, user, savedScripts = [] }) {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef(null);
@@ -14,6 +14,14 @@ export default function ChatBox({ team, user }) {
   const [pollQuestion, setPollQuestion] = useState("");
   const [pollOptions, setPollOptions] = useState(["", ""]);
   const [isMultiSelect, setIsMultiSelect] = useState(false);
+
+  // Task state
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [taskTitle, setTaskTitle] = useState("");
+
+  // Code sharing state
+  const [showCodeShare, setShowCodeShare] = useState(false);
+  const [selectedScript, setSelectedScript] = useState(null);
 
   useEffect(() => {
     const q = query(
@@ -134,6 +142,66 @@ export default function ChatBox({ team, user }) {
     }
   };
 
+  const handleCreateTask = async (e) => {
+    e.preventDefault();
+    if (!taskTitle.trim()) return;
+
+    try {
+      await addDoc(collection(db, "team_messages"), {
+        teamId: team.id,
+        senderId: user.uid,
+        senderName: user.displayName || "User",
+        task: {
+          title: taskTitle.trim(),
+          completed: false,
+          completedBy: null,
+          completedAt: null
+        },
+        createdAt: new Date().toISOString()
+      });
+      setShowTaskForm(false);
+      setTaskTitle("");
+    } catch (err) {
+      console.error("Error creating task:", err);
+    }
+  };
+
+  const handleToggleTask = async (msgId, task) => {
+    try {
+      await updateDoc(doc(db, "team_messages", msgId), {
+        "task.completed": !task.completed,
+        "task.completedBy": !task.completed ? (user.displayName || "User") : null,
+        "task.completedAt": !task.completed ? new Date().toISOString() : null
+      });
+    } catch (err) {
+      console.error("Error updating task:", err);
+    }
+  };
+
+  const handleShareCode = async () => {
+    if (!selectedScript) return;
+    try {
+      await addDoc(collection(db, "team_messages"), {
+        teamId: team.id,
+        senderId: user.uid,
+        senderName: user.displayName || "User",
+        codeShare: {
+          scriptName: selectedScript.name,
+          code: selectedScript.code,
+          alliance: selectedScript.alliance || "red",
+          gameMode: selectedScript.gameMode || "push_back"
+        },
+        createdAt: new Date().toISOString()
+      });
+
+      setShowCodeShare(false);
+      setSelectedScript(null);
+    } catch (err) {
+      console.error("Error sharing code:", err);
+      alert("Failed to share code: " + (err.message || err));
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-950 flex-1">
       {/* Chat Messages Area */}
@@ -173,7 +241,6 @@ export default function ChatBox({ team, user }) {
                     </div>
                     <div className="space-y-2 w-full">
                       {msg.poll.options.map((opt, idx) => {
-                        // Calculate votes
                         let count = 0;
                         const hasVoted = (msg.poll.votes[user.uid] || []).includes(idx);
                         Object.values(msg.poll.votes).forEach(userVotes => {
@@ -188,7 +255,6 @@ export default function ChatBox({ team, user }) {
                             onClick={() => handleVote(msg.id, msg.poll, idx)}
                             className={`relative w-full text-left overflow-hidden rounded-lg border transition-all ${hasVoted ? 'border-emerald-300 bg-emerald-900/50' : 'border-black/20 bg-black/10 hover:bg-black/20'}`}
                           >
-                            {/* Progress Bar Background */}
                             <div 
                               className={`absolute inset-0 opacity-20 ${isMe ? 'bg-black' : 'bg-emerald-500'}`} 
                               style={{ width: `${percent}%` }}
@@ -210,6 +276,51 @@ export default function ChatBox({ team, user }) {
                     <div className="text-[10px] opacity-60 mt-2 font-mono">
                       {Object.keys(msg.poll.votes).length} total voters
                     </div>
+                  </div>
+                )}
+
+                {/* Task Message */}
+                {msg.task && (
+                  <div className="mt-2 w-full min-w-[250px] md:min-w-[350px] bg-slate-900/50 rounded-xl p-3 border border-slate-700">
+                    <div className="flex items-start gap-3">
+                      <button
+                        onClick={() => handleToggleTask(msg.id, msg.task)}
+                        className={`flex-shrink-0 w-5 h-5 rounded border-2 flex items-center justify-center mt-0.5 transition-all ${
+                          msg.task.completed
+                            ? "bg-emerald-500 border-emerald-500 text-slate-950 font-bold"
+                            : "border-slate-500 hover:border-emerald-400"
+                        }`}
+                      >
+                        {msg.task.completed && <span className="text-xs">✓</span>}
+                      </button>
+                      <div className="flex-1">
+                        <p className={`font-mono text-sm font-bold ${msg.task.completed ? "line-through text-slate-500" : ""}`}>
+                          {msg.task.title}
+                        </p>
+                        {msg.task.completed && msg.task.completedBy && (
+                          <p className="text-[10px] text-emerald-400 mt-1 font-mono">
+                            ✓ Completed by {msg.task.completedBy}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Code Share Message */}
+                {msg.codeShare && (
+                  <div className="mt-2 w-full min-w-[280px] md:min-w-[380px] bg-slate-950/80 rounded-xl p-3 border border-slate-700">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-lg">💾</span>
+                      <span className="font-mono text-xs font-bold text-emerald-400">{msg.codeShare.scriptName}</span>
+                      <span className="text-[9px] bg-slate-800/80 px-2 py-0.5 rounded text-slate-400">
+                        {msg.codeShare.gameMode === "override" ? "Override" : "Push Back"}
+                      </span>
+                    </div>
+                    <pre className="bg-slate-950 border border-slate-700/50 rounded p-2 text-[11px] text-emerald-400 overflow-x-auto max-h-[200px]">
+                      <code>{msg.codeShare.code}</code>
+                    </pre>
+                    <p className="text-[10px] text-slate-400 mt-2">Alliance: {msg.codeShare.alliance?.toUpperCase()}</p>
                   </div>
                 )}
                 
@@ -285,38 +396,134 @@ export default function ChatBox({ team, user }) {
         </div>
       )}
 
-      {/* Message Input Area */}
-      <div className="p-4 bg-slate-900 border-t border-slate-800">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
+      {/* Task Creation Form */}
+      {showTaskForm && (
+        <div className="bg-slate-900 border-t border-slate-800 p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold font-mono text-emerald-400">✓ Create Task</h3>
+            <button onClick={() => setShowTaskForm(false)} className="text-slate-500 hover:text-white">✕</button>
+          </div>
+          <form onSubmit={handleCreateTask} className="space-y-3">
+            <input
+              type="text"
+              placeholder="Task title (e.g., 'Build intake', 'Fix motor 3')"
+              required
+              value={taskTitle}
+              onChange={e => setTaskTitle(e.target.value)}
+              className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white focus:outline-none focus:border-emerald-500 text-sm"
+            />
+            <button 
+              type="submit" 
+              className="w-full px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded font-bold text-sm transition-colors"
+            >
+              Create Task
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Code Share Form */}
+      {showCodeShare && (
+        <div className="bg-slate-900 border-t border-slate-800 p-4">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="font-bold font-mono text-emerald-400">💾 Share Auton Code</h3>
+            <button onClick={() => setShowCodeShare(false)} className="text-slate-500 hover:text-white">✕</button>
+          </div>
+          <form onSubmit={handleShareCode} className="space-y-3">
+            <select
+              value={selectedScript?.id || ""}
+              onChange={e => {
+                const script = savedScripts.find(s => s.id === e.target.value);
+                setSelectedScript(script);
+              }}
+              className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white focus:outline-none focus:border-emerald-500 text-sm"
+            >
+              <option value="">Select a saved script...</option>
+              {savedScripts.map(script => (
+                <option key={script.id} value={script.id}>
+                  {script.name} ({script.gameMode === "override" ? "Override" : "Push Back"})
+                </option>
+              ))}
+            </select>
+            {selectedScript && (
+              <div className="bg-slate-950 border border-slate-700 rounded p-2 max-h-[150px] overflow-auto">
+                <pre className="text-[10px] text-emerald-400">
+                  <code>{selectedScript.code}</code>
+                </pre>
+              </div>
+            )}
+            <button 
+              type="submit" 
+              disabled={!selectedScript}
+              className="w-full px-4 py-2 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white rounded font-bold text-sm transition-colors"
+            >
+              Share Code
+            </button>
+          </form>
+        </div>
+      )}
+
+      {/* Message Input Area (Compact Option Buttons & Longer Typing Box) */}
+      <div className="p-3 md:p-4 bg-slate-900 border-t border-slate-800">
+        <form onSubmit={handleSendMessage} className="flex items-center gap-1.5 w-full">
           
-          <button 
-            type="button"
-            onClick={() => setShowPollForm(!showPollForm)}
-            className="p-2.5 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-transparent hover:border-slate-700"
-            title="Create Poll"
-          >
-            📊
-          </button>
+          {/* Tightly Spaced Option Buttons (No Text Labels) */}
+          <div className="flex items-center gap-1 shrink-0">
+            <button 
+              type="button"
+              onClick={() => setShowPollForm(!showPollForm)}
+              className="p-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-slate-800 hover:border-slate-700"
+              title="Poll"
+            >
+              📊
+            </button>
 
-          <label className="p-2.5 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-700" title="Upload Image">
-            🖼️
-            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-          </label>
+            <button 
+              type="button"
+              onClick={() => setShowTaskForm(!showTaskForm)}
+              className="p-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-slate-800 hover:border-slate-700"
+              title="Share Task"
+            >
+              ✓
+            </button>
 
-          <input
-            type="text"
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message to the team..."
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500"
-          />
-          <button 
-            type="submit"
-            disabled={!newMessage.trim()}
-            className="px-6 py-2.5 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold rounded-lg transition-colors"
-          >
-            Send
-          </button>
+            <button 
+              type="button"
+              onClick={() => setShowCodeShare(!showCodeShare)}
+              disabled={savedScripts.length === 0}
+              className="p-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors border border-slate-800 hover:border-slate-700"
+              title="Upload Code"
+            >
+              💾
+            </button>
+
+            <label 
+              className="p-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors cursor-pointer border border-slate-800 hover:border-slate-700" 
+              title="Upload Image"
+            >
+              🖼️
+              <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+            </label>
+          </div>
+
+          {/* Expanded Input Box & Send Button */}
+          <div className="flex-1 flex items-center gap-2">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              placeholder="Type a message to the team..."
+              className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-emerald-500 text-sm"
+            />
+            <button 
+              type="submit"
+              disabled={!newMessage.trim()}
+              className="px-5 py-2 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold rounded-lg transition-colors text-sm shrink-0"
+            >
+              Send
+            </button>
+          </div>
+
         </form>
       </div>
     </div>
