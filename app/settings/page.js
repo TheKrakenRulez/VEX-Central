@@ -14,9 +14,7 @@ export default function SettingsPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 px-6 py-12">
-      <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-red-600/10 rounded-full blur-[100px] pointer-events-none" />
-      <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
+    <div className="min-h-screen bg-[#0b132b] text-slate-100 px-6 py-12">
 
       <main className="relative z-10 mx-auto max-w-3xl">
         <div className="mb-10 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">

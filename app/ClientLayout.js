@@ -44,7 +44,7 @@ function NavBar() {
       <nav className="flex items-center gap-5">
         {isGuest && (
           <div className="px-3 py-1 rounded-full border border-amber-500/40 bg-amber-500/10 text-[10px] font-mono font-bold uppercase tracking-wider text-amber-200">
-            Guest View — not saved
+            Guest View
           </div>
         )}
 
@@ -158,7 +158,7 @@ function AuthGuard({ children }) {
 
   if (isAuthLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="min-h-screen bg-[#0b132b] flex items-center justify-center">
         <div className="flex flex-col items-center gap-4">
           <div className="w-10 h-10 border-4 border-slate-700 border-t-red-500 rounded-full animate-spin" />
           <p className="text-slate-600 font-mono text-xs uppercase tracking-widest">Loading VEX Central...</p>

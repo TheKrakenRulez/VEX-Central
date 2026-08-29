@@ -113,25 +113,25 @@ export const overridePickupBlocks = [
     { sourceId: "o-12", x: 500, y: 400, color: "yellow-yellow", visible: true },
     { sourceId: "o-13", x: 400, y: 500, color: "yellow-yellow", visible: true },
 
-    // Cross/star at (100, 100) — center left 2, up 2
+    // Cross/star at (100, 100) - center left 2, up 2
     { sourceId: "o-14", x: 100, y: 80, color: "blue-yellow", visible: true },
     { sourceId: "o-15", x: 100, y: 120, color: "yellow-red", visible: true },
     { sourceId: "o-16", x: 80, y: 100, color: "red-yellow", visible: true, orientation: "horizontal" },
     { sourceId: "o-17", x: 120, y: 100, color: "yellow-blue", visible: true, orientation: "horizontal" },
 
-    // Cross/star at (200, 200) — down 1 right 1 from (100,100)
+    // Cross/star at (200, 200) - down 1 right 1 from (100,100)
     { sourceId: "o-18", x: 200, y: 180, color: "blue-yellow", visible: true },
     { sourceId: "o-19", x: 200, y: 220, color: "yellow-red", visible: true },
     { sourceId: "o-20", x: 180, y: 200, color: "red-yellow", visible: true, orientation: "horizontal" },
     { sourceId: "o-21", x: 220, y: 200, color: "yellow-blue", visible: true, orientation: "horizontal" },
 
-    // Cross/star at (400, 400) — down 2 right 2 from (200,200)
+    // Cross/star at (400, 400) - down 2 right 2 from (200,200)
     { sourceId: "o-22", x: 400, y: 380, color: "blue-yellow", visible: true },
     { sourceId: "o-23", x: 400, y: 420, color: "yellow-red", visible: true },
     { sourceId: "o-24", x: 380, y: 400, color: "red-yellow", visible: true, orientation: "horizontal" },
     { sourceId: "o-25", x: 420, y: 400, color: "yellow-blue", visible: true, orientation: "horizontal" },
 
-    // Cross/star at (500, 500) — down 1 right 1 from (400,400)
+    // Cross/star at (500, 500) - down 1 right 1 from (400,400)
     { sourceId: "o-26", x: 500, y: 480, color: "blue-yellow", visible: true },
     { sourceId: "o-27", x: 500, y: 520, color: "yellow-red", visible: true },
     { sourceId: "o-28", x: 480, y: 500, color: "red-yellow", visible: true, orientation: "horizontal" },

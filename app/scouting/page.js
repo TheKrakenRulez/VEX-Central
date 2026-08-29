@@ -215,14 +215,11 @@ export default function ScoutingPage() {
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 px-6 py-12">
-            {/* Background Ambient Glows */}
-            <div className="fixed top-1/4 left-1/4 w-96 h-96 bg-blue-600/10 rounded-full blur-[100px] pointer-events-none" />
-            <div className="fixed bottom-1/4 right-1/4 w-96 h-96 bg-cyan-600/10 rounded-full blur-[100px] pointer-events-none" />
+        <div className="min-h-[calc(100vh-73px)] bg-[#0b132b] text-slate-100 px-6 py-6 md:py-8">
 
             <div className="max-w-6xl mx-auto relative z-10">
                 {/* Header */}
-                <div className="mb-12">
+                <div className="mb-6">
                     <h1 className="text-4xl md:text-5xl font-black font-mono tracking-tight text-white uppercase mb-2">
                         Scouting
                     </h1>

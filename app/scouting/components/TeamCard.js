@@ -26,9 +26,9 @@ export default function TeamCard({ team, onEdit, onDelete }) {
                             </span>
                         </div>
                         <p className="text-slate-400 text-sm font-mono mt-2 flex items-center gap-3">
-                            <span>{team.primaryStrategy || "—"}</span>
+                            <span>{team.primaryStrategy || "None"}</span>
                             <span className="text-slate-600">•</span>
-                            <span>{team.drivetrainSpeed || "—"}</span>
+                            <span>{team.drivetrainSpeed || "None"}</span>
                             <span className="text-slate-600">•</span>
                             <span className={team.hasAuton === "yes" ? "text-emerald-400" : "text-slate-500"}>
                                 {team.hasAuton === "yes" ? "Auton ✓" : "No Auton"}

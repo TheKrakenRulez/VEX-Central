@@ -85,7 +85,7 @@ export default function TeamWorkspacePage({ params }) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-80px)] flex flex-col p-4 md:p-8 max-w-6xl mx-auto w-full">
+    <div className="min-h-[calc(100vh-73px)] flex flex-col p-4 md:py-6 max-w-6xl mx-auto w-full">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
         <div>
           <Link href="/team" className="text-emerald-500 font-mono text-sm hover:underline mb-2 inline-block">
@@ -127,6 +127,9 @@ export default function TeamWorkspacePage({ params }) {
       <div className="flex-1 flex gap-4 min-h-[500px]">
         <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
           <ChatBox team={team} user={user} savedScripts={savedScripts} />
+        </div>
+        <div className="hidden lg:flex lg:w-80">
+          <PinnedResources teamId={teamId} user={user} />
         </div>
       </div>
 

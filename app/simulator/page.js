@@ -192,68 +192,20 @@ export default function Home() {
     }
     const loadScripts = async () => {
       try {
-        const scriptsMap = new Map();
-
-        // 1. Load user's personal scripts from Firestore
-        const qPersonal = query(
+        const q = query(
           collection(db, "scripts"),
           where("userId", "==", user.uid)
         );
-        const personalSnapshot = await getDocs(qPersonal);
-        personalSnapshot.forEach((docSnap) => {
-          scriptsMap.set(docSnap.id, { id: docSnap.id, ...docSnap.data() });
+        const querySnapshot = await getDocs(q);
+        const scripts = [];
+        querySnapshot.forEach((document) => {
+          scripts.push({ id: document.id, ...document.data() });
         });
-
-        // 2. Load teams user belongs to
-        const tq = query(
-          collection(db, "teams"),
-          where("members", "array-contains", user.uid)
-        );
-        const teamSnap = await getDocs(tq);
-        const teamIds = [];
-        teamSnap.forEach((docSnap) => teamIds.push(docSnap.id));
-
-        // 3. Load shared code from team messages
-        if (teamIds.length > 0) {
-          for (const tId of teamIds) {
-            try {
-              const qMsg = query(
-                collection(db, "team_messages"),
-                where("teamId", "==", tId)
-              );
-              const msgSnapshot = await getDocs(qMsg);
-              msgSnapshot.forEach((docSnap) => {
-                const msgData = docSnap.data();
-                if (msgData.codeShare) {
-                  const shareId = `shared_${docSnap.id}`;
-                  if (!scriptsMap.has(shareId)) {
-                    scriptsMap.set(shareId, {
-                      id: shareId,
-                      userId: msgData.senderId,
-                      authorName: msgData.senderName,
-                      name: msgData.codeShare.scriptName,
-                      code: msgData.codeShare.code,
-                      alliance: msgData.codeShare.alliance || "red",
-                      gameMode: msgData.codeShare.gameMode || "push_back",
-                      isTeamShared: true, // Only team-shared code gets isTeamShared
-                      createdAt: msgData.createdAt
-                    });
-                  }
-                }
-              });
-            } catch (e) {
-              console.warn("Could not fetch team messages for team:", tId, e);
-            }
-          }
-        }
-
-        const scripts = Array.from(scriptsMap.values());
         scripts.sort((a, b) => {
-          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : (typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : (typeof a.createdAt === 'number' ? a.createdAt : Date.now()));
-          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : (typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : (typeof b.createdAt === 'number' ? b.createdAt : Date.now()));
+          const timeA = a.createdAt?.toMillis ? a.createdAt.toMillis() : Date.now();
+          const timeB = b.createdAt?.toMillis ? b.createdAt.toMillis() : Date.now();
           return timeB - timeA;
         });
-
         setSavedScripts(scripts);
       } catch (error) {
         console.error("Error loading scripts:", error);
@@ -282,40 +234,22 @@ export default function Home() {
     setIsSaving(true);
     try {
       const targetMode = savedScriptTab || gameMode;
-      const cleanRobotState = robotState ? {
-        x: Number(robotState.x) || 100,
-        y: Number(robotState.y) || 450,
-        angle: Number(robotState.angle) || 0
-      } : null;
-
-      const docData = {
+      const docRef = await addDoc(collection(db, "scripts"), {
         userId: user.uid,
         name: saveName.trim(),
         code: codeText,
-        alliance: alliance || "red",
+        alliance: alliance,
         gameMode: targetMode,
-        robotState: cleanRobotState,
+        robotState: robotState,
         createdAt: serverTimestamp()
-      };
-
-      const docRef = await addDoc(collection(db, "scripts"), docData);
-      const newScript = {
-        id: docRef.id,
-        userId: user.uid,
-        name: saveName.trim(),
-        code: codeText,
-        alliance: alliance || "red",
-        gameMode: targetMode,
-        robotState: cleanRobotState,
-        createdAt: Date.now()
-      };
-
-      setSavedScripts((prev) => [newScript, ...prev.filter(s => s.id !== docRef.id)]);
+      });
+      const newScript = { id: docRef.id, name: saveName.trim(), code: codeText, alliance, gameMode: targetMode, robotState, createdAt: { toMillis: () => Date.now() } };
+      setSavedScripts([newScript, ...savedScripts]);
       setActiveScript(newScript);
       setSaveName("");
     } catch (error) {
       console.error("Error saving script:", error);
-      alert("Failed to save script: " + (error.message || error));
+      alert("Failed to save script.");
     }
     setIsSaving(false);
   };
@@ -359,7 +293,7 @@ export default function Home() {
   const [robotState, setRobotState] = useState(startingPositions.red);
   const [robotPath, setRobotPath] = useState([startingPositions.red]);
   const [isDragging, setIsDragging] = useState(false);
-  const [gameMode, setGameMode] = useState("push_back"); // "push_back" or "override"
+  const [gameMode, setGameMode] = useState("override"); // "push_back" or "override"
   const getInitialPickupBlocks = (mode) => {
     if (mode === "override") {
       return [...overridePickupBlocks];
@@ -694,17 +628,41 @@ export default function Home() {
   const scoreHalfColor = (color, quadrantState, allianceColor) => {
     if (!color) return 0;
     if (color === "yellow") {
-      if (quadrantState === "yellow") return 0;
+      // Yellow blocks only score when the quadrant toggle is set to the alliance color
       if (quadrantState === allianceColor) return 10;
-      return 0;
+      return 0; // No points if toggle is yellow/neutral or opponent color
     }
-    if (color === allianceColor) return 5;
+    if (color === allianceColor) {
+      // Own color blocks always score 5, regardless of toggle
+      return 5;
+    }
     return 0;
   };
 
   const getOverrideScoreForAlliance = (goalStatesToScore, quadrantStatesToScore, alliance) => {
     const allianceColor = alliance === "red" ? "red" : "blue";
-    return Object.entries(goalStatesToScore).reduce((sum, [goalId, goalState]) => {
+
+    const effectiveGoalStates = { ...goalStatesToScore };
+    overrideGoalTargets.forEach((goal) => {
+      if (!effectiveGoalStates[goal.goalId]) {
+        effectiveGoalStates[goal.goalId] = { items: [], flipped: false };
+      }
+    });
+
+    (scoredBlocks || []).forEach((block) => {
+      if (block?.goalId && effectiveGoalStates[block.goalId]) {
+        const items = effectiveGoalStates[block.goalId].items;
+        const exists = items.some((it) => it.type === "block" && (it.sourceId === block.sourceId || (it.x === block.x && it.y === block.y)));
+        if (!exists) {
+          effectiveGoalStates[block.goalId] = {
+            ...effectiveGoalStates[block.goalId],
+            items: [...items, { type: "block", ...block }]
+          };
+        }
+      }
+    });
+
+    return Object.entries(effectiveGoalStates).reduce((sum, [goalId, goalState]) => {
       if (!isGoalAllowedForAlliance(goalId, alliance)) return sum;
 
       const goal = overrideGoalTargets.find((candidate) => candidate.goalId === goalId);
@@ -1702,14 +1660,7 @@ export default function Home() {
                           {script.alliance && (
                             <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${script.alliance === "red" ? "bg-red-500" : "bg-blue-500"}`} />
                           )}
-                          <p className="text-emerald-400 font-mono text-xs font-bold whitespace-pre-wrap break-words text-left flex items-center gap-1.5 flex-wrap" title={script.name}>
-                            <span>{script.name}</span>
-                            {script.isTeamShared && (
-                              <span className="text-slate-400 font-normal text-[10px] bg-slate-800/80 border border-slate-700 px-1 py-0.2 rounded font-mono">
-                                (shared)
-                              </span>
-                            )}
-                          </p>
+                          <p className="text-emerald-400 font-mono text-xs font-bold whitespace-pre-wrap break-words text-left" title={script.name}>{script.name}</p>
                         </div>
                         <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <span
@@ -1922,7 +1873,7 @@ export default function Home() {
               <span className="text-slate-300 truncate">{currentLine}</span>
             </div>
 
-            {/* LOADER BLOCKS KEY — Push Back only */}
+            {/* LOADER BLOCKS KEY - Push Back only */}
             {gameMode !== "override" ? (
               <div className="bg-slate-900 border border-slate-800 rounded-2xl p-4 shadow-md">
                 <p className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold mb-3">Loader Blocks Key</p>

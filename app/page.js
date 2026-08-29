@@ -1,139 +1,119 @@
 "use client";
 import Link from "next/link";
 
-
 export default function WelcomeDashboard() {
   return (
-    <div className="min-h-[80vh] flex flex-col justify-center items-center px-6 relative overflow-hidden">
+    <div className="min-h-[calc(100vh-73px)] bg-[#03050a] flex flex-col justify-center items-center px-6 py-4 md:py-6 relative overflow-hidden">
 
-      {/* Background Ambient Glows */}
-      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-red-600/20 rounded-full blur-[100px] pointer-events-none" />
-      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600/20 rounded-full blur-[100px] pointer-events-none" />
+      {/* VISIBLE TRANSPARENT GRID PATTERN THROUGHOUT */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] opacity-40 pointer-events-none" />
 
-      {/* Grid Overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-40 pointer-events-none" />
+      <main className="w-full max-w-5xl z-10 flex flex-col items-center my-auto">
 
-      <main className="w-full max-w-5xl text-center z-10 flex flex-col items-center">
-
-        {/* HERO SECTION */}
-        <div className="mb-12 animate-fade-in">
-          <div className="inline-flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-full px-4 py-1.5 mb-6 shadow-inner">
-            <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-            <span className="text-[10px] font-mono uppercase tracking-[0.2em] text-slate-400">
+        {/* HERO SECTION (Larger text, moved up, spacious gap) */}
+        <div className="-mt-2 mb-8 md:mb-10 text-center max-w-4xl flex flex-col items-center gap-4">
+          <div className="inline-flex items-center gap-2.5 bg-slate-900/90 border border-slate-800 rounded-full px-4 py-1.5 shadow-inner">
+            <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-pulse" />
+            <span className="text-[0.7rem] font-mono uppercase tracking-[0.2em] text-slate-300 font-bold">
               VEX Robotics Hub
             </span>
-            <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500 animate-pulse" />
           </div>
 
-          <h1 className="text-4xl md:text-6xl font-black font-mono tracking-tight text-white uppercase leading-none">
-            VEX <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-blue-500">Central</span>
+          <h1 className="text-[2.8rem] md:text-[4.2rem] font-black font-mono tracking-tight text-white uppercase leading-none">
+            VEX <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 via-purple-400 to-blue-500">Central</span>
           </h1>
 
-          <p className="text-md md:text-lg text-slate-400 max-w-xl mx-auto mt-6 font-mono leading-relaxed">
-            The ultimate companion platform for VEX Robotics teams.
+          <p className="text-[0.94rem] md:text-[1.17rem] text-slate-300 max-w-2xl mx-auto font-mono leading-relaxed">
+            The ultimate companion platform for VEX Robotics teams
           </p>
         </div>
 
-        {/* INTERACTIVE NAVIGATION CARDS */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full mt-4 max-w-6xl">
+        {/* TILES CONTAINER (5% Less Color than original 20%, outline Red/Blue/Green, extra space at top) */}
+        <div className="w-full max-w-5xl space-y-5">
 
-          {/* CARD 1: SIMULATOR */}
-          <Link
-            href="/simulator"
-            className="group relative bg-slate-900/50 hover:bg-slate-900 border border-slate-800 hover:border-red-500/50 rounded-3xl p-8 text-left shadow-2xl transition-all duration-300 transform hover:scale-[1.02] overflow-hidden"
-          >
-            {/* Hover card border glow */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-red-500/5 rounded-full blur-2xl group-hover:bg-red-500/10 transition-all duration-300" />
+          {/* TOP ROW: SIMULATOR (LEFT) & SCOUTING (RIGHT) */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5 md:gap-6 w-full">
 
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-12 h-12 bg-red-500/10 border border-red-500/30 rounded-2xl flex items-center justify-center text-xl text-red-400 font-mono font-bold shadow-inner">
-                🕹️
+            {/* CARD 1: SIMULATOR */}
+            <Link
+              href="/simulator"
+              className="group relative overflow-hidden bg-[#03050a]/60 border border-red-500/25 hover:border-red-500/55 rounded-2xl pt-9 px-6 pb-6 text-left shadow-xl transition-all duration-300 transform hover:scale-[1.01] flex flex-col justify-between"
+            >
+              {/* Colored tint overlay */}
+              <div className="absolute inset-0 bg-red-950/15 group-hover:bg-red-950/25 transition-colors rounded-2xl pointer-events-none" />
+              <div className="relative z-10">
+                <h2 className="text-lg md:text-xl font-bold font-mono uppercase text-white tracking-wide group-hover:text-red-400 transition-colors mb-1">
+                  Autonomous Simulator
+                </h2>
+                <p className="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed font-sans">
+                  Test your robot's autonomous code. Write in a python-like script, test your code and score your autonomous routines with a simple, high-performance simulation tool.
+                </p>
               </div>
-              <span className="text-slate-600 group-hover:text-red-400 font-bold transition-colors">➔</span>
-            </div>
 
-            <h2 className="text-xl font-bold font-mono uppercase text-white tracking-wide group-hover:text-red-400 transition-colors">
-              Autonomous Simulator
-            </h2>
-            <p className="text-sm text-slate-400 mt-4 leading-relaxed font-sans">
-              Test your robot's autonomous code. Write in a python-like script, test your code and score your autonomous routines with a simple, high-performance simulation tool.
-
-            </p>
-
-            <div className="mt-8 pt-4 border-t border-slate-800/60 flex items-center gap-2">
-              <span className="text-[10px] font-mono text-red-400 uppercase font-black tracking-wider">
-                Run Simulation
-              </span>
-              <span className="text-slate-500 text-xs font-bold group-hover:translate-x-1 transition-transform">→</span>
-            </div>
-          </Link>
-
-          {/* CARD 2: SCOUTING */}
-          <Link
-            href="/scouting"
-            className="group relative bg-slate-900/50 hover:bg-slate-900 border border-slate-800 hover:border-blue-500/50 rounded-3xl p-8 text-left shadow-2xl transition-all duration-300 transform hover:scale-[1.02] overflow-hidden"
-          >
-            {/* Hover card border glow */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-blue-500/5 rounded-full blur-2xl group-hover:bg-blue-500/10 transition-all duration-300" />
-
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-12 h-12 bg-blue-500/10 border border-blue-500/30 rounded-2xl flex items-center justify-center text-xl text-blue-400 font-mono font-bold shadow-inner">
-                📋
+              <div className="relative z-10 mt-6 flex items-center justify-between">
+                <span className="text-sm font-mono font-bold text-red-400 tracking-wide">
+                  Run Simulation
+                </span>
+                <span className="text-red-400 text-sm font-bold group-hover:translate-x-1 transition-transform">→</span>
               </div>
-              <span className="text-slate-600 group-hover:text-blue-400 font-bold transition-colors">➔</span>
-            </div>
+            </Link>
 
-            <h2 className="text-xl font-bold font-mono uppercase text-white tracking-wide group-hover:text-blue-400 transition-colors">
-              Scouting
-            </h2>
-            <p className="text-sm text-slate-400 mt-4 leading-relaxed font-sans">
-              Add competitions and track robot capabilities such as speed, efficiency, auton data, scoring, and more. Use our Match Scout ranking system to filter through robots and find the best alliance for you.
-
-
-            </p>
-
-            <div className="mt-8 pt-4 border-t border-slate-800/60 flex items-center gap-2">
-              <span className="text-[10px] font-mono text-blue-400 uppercase font-black tracking-wider">
-                Start Scouting
-              </span>
-              <span className="text-slate-500 text-xs font-bold group-hover:translate-x-1 transition-transform">→</span>
-            </div>
-          </Link>
-
-          {/* CARD 3: TEAM WORKSPACE */}
-          <Link
-            href="/team"
-            className="group relative bg-slate-900/50 hover:bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-3xl p-8 text-left shadow-2xl transition-all duration-300 transform hover:scale-[1.02] overflow-hidden"
-          >
-            {/* Hover card border glow */}
-            <div className="absolute top-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full blur-2xl group-hover:bg-emerald-500/10 transition-all duration-300" />
-
-            <div className="flex justify-between items-start mb-6">
-              <div className="w-12 h-12 bg-emerald-500/10 border border-emerald-500/30 rounded-2xl flex items-center justify-center text-xl text-emerald-400 font-mono font-bold shadow-inner">
-                👥
+            {/* CARD 2: SCOUTING */}
+            <Link
+              href="/scouting"
+              className="group relative overflow-hidden bg-[#03050a]/60 border border-blue-500/25 hover:border-blue-500/55 rounded-2xl pt-9 px-6 pb-6 text-left shadow-xl transition-all duration-300 transform hover:scale-[1.01] flex flex-col justify-between"
+            >
+              {/* Colored tint overlay */}
+              <div className="absolute inset-0 bg-blue-950/15 group-hover:bg-blue-950/25 transition-colors rounded-2xl pointer-events-none" />
+              <div className="relative z-10">
+                <h2 className="text-lg md:text-xl font-bold font-mono uppercase text-white tracking-wide group-hover:text-blue-400 transition-colors mb-1">
+                  Scouting
+                </h2>
+                <p className="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed font-sans">
+                  Add competitions and track robot capabilities such as speed, efficiency, auton data, scoring, and more. Use our Match Scout ranking system to filter through robots and find the best alliance for you.
+                </p>
               </div>
-              <span className="text-slate-600 group-hover:text-emerald-400 font-bold transition-colors">➔</span>
-            </div>
 
-            <h2 className="text-xl font-bold font-mono uppercase text-white tracking-wide group-hover:text-emerald-400 transition-colors">
-              Team Workspace
-            </h2>
-            <p className="text-sm text-slate-400 mt-4 leading-relaxed font-sans">
-                Collaborate with your entire team from one place. Share scouting data, chat in real time, and run polls to make crucial decisions together, keeping everyone aligned throughout the entire competition season.
-            </p>
+              <div className="relative z-10 mt-6 flex items-center justify-between">
+                <span className="text-sm font-mono font-bold text-blue-400 tracking-wide">
+                  Start Scouting
+                </span>
+                <span className="text-blue-400 text-sm font-bold group-hover:translate-x-1 transition-transform">→</span>
+              </div>
+            </Link>
 
-            <div className="mt-8 pt-4 border-t border-slate-800/60 flex items-center gap-2">
-              <span className="text-[10px] font-mono text-emerald-400 uppercase font-black tracking-wider">
-                Open Workspace
-              </span>
-              <span className="text-slate-500 text-xs font-bold group-hover:translate-x-1 transition-transform">→</span>
-            </div>
-          </Link>
+          </div>
+
+          {/* BOTTOM ROW: TEAM WORKSPACE (CENTERED BELOW) */}
+          <div className="w-full max-w-2xl mx-auto">
+            <Link
+              href="/team"
+              className="group relative overflow-hidden bg-[#03050a]/60 border border-emerald-500/25 hover:border-emerald-500/55 rounded-2xl pt-9 px-6 pb-6 text-left shadow-xl transition-all duration-300 transform hover:scale-[1.01] flex flex-col justify-between block"
+            >
+              {/* Colored tint overlay */}
+              <div className="absolute inset-0 bg-emerald-950/15 group-hover:bg-emerald-950/25 transition-colors rounded-2xl pointer-events-none" />
+              <div className="relative z-10">
+                <h2 className="text-lg md:text-xl font-bold font-mono uppercase text-white tracking-wide group-hover:text-emerald-400 transition-colors mb-1">
+                  Team Workspace
+                </h2>
+                <p className="text-xs md:text-sm text-slate-400 mt-2 leading-relaxed font-sans">
+                  Collaborate with your entire team. Share scouting data, chat in real-time, and run team polls to make critical design decisions together, keeping everyone aligned throughout the entire competition season.
+                </p>
+              </div>
+
+              <div className="relative z-10 mt-6 flex items-center justify-between">
+                <span className="text-sm font-mono font-bold text-emerald-400 tracking-wide">
+                  Open Workspace
+                </span>
+                <span className="text-emerald-400 text-sm font-bold group-hover:translate-x-1 transition-transform">→</span>
+              </div>
+            </Link>
+          </div>
 
         </div>
 
-          
-        </main>
+      </main>
     </div>
   );
 }

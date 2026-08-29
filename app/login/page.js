@@ -53,7 +53,7 @@ export default function LoginPage() {
 
   if (!hasFirebaseConfig && !isAuthLoading) {
     return (
-      <div className="min-h-screen bg-slate-950 flex items-center justify-center px-6">
+      <div className="min-h-screen bg-[#0b132b] flex items-center justify-center px-6">
         <div className="relative z-10 w-full max-w-2xl rounded-3xl border border-red-500/40 bg-slate-900/90 p-8 text-slate-200 shadow-2xl">
           <h1 className="text-2xl font-bold font-mono text-white mb-4">
             Firebase configuration missing
@@ -80,14 +80,9 @@ export default function LoginPage() {
   if (isAuthLoading || user) return null;
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center relative overflow-hidden px-6">
-
-      {/* Ambient background glows */}
-      <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-red-600/10 rounded-full blur-[160px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[160px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
-
-      {/* Grid overlay */}
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_70%_at_50%_50%,#000_60%,transparent_100%)] opacity-20 pointer-events-none" />
+    <div className="min-h-screen bg-[#0b132b] flex items-center justify-center relative overflow-hidden px-6">
+      {/* Line Grid background */}
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] opacity-35 pointer-events-none" />
 
       {/* Login card */}
       <div className="relative z-10 w-full max-w-md">

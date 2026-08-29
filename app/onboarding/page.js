@@ -13,10 +13,8 @@ export default function OnboardingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center relative overflow-hidden px-6 py-12">
-      <div className="absolute top-0 left-0 w-[600px] h-[600px] bg-red-600/10 rounded-full blur-[160px] -translate-x-1/2 -translate-y-1/2 pointer-events-none" />
-      <div className="absolute bottom-0 right-0 w-[600px] h-[600px] bg-blue-600/10 rounded-full blur-[160px] translate-x-1/2 translate-y-1/2 pointer-events-none" />
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:4rem_4rem] [mask-image:radial-gradient(ellipse_70%_70%_at_50%_50%,#000_60%,transparent_100%)] opacity-20 pointer-events-none" />
+    <div className="min-h-screen bg-[#0b132b] flex items-center justify-center relative overflow-hidden px-6 py-12">
+      <div className="absolute inset-0 bg-[linear-gradient(to_right,#1e293b_1px,transparent_1px),linear-gradient(to_bottom,#1e293b_1px,transparent_1px)] bg-[size:3.5rem_3.5rem] opacity-35 pointer-events-none" />
 
       <main className="relative z-10 w-full max-w-lg">
         <div className="mb-8 text-center">
