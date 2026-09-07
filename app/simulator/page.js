@@ -315,6 +315,11 @@ export default function Home() {
   const [pickupBlocks, setPickupBlocks] = useState(() => getInitialPickupBlocks("push_back"));
   const [pickupCupMarkers, setPickupCupMarkers] = useState(() => overrideCupPickupTargets.map((target) => ({ ...target, visible: true })));
   const [blockCupMarkers, setBlockCupMarkers] = useState(() => getInitialBlockCupMarkers());
+  const [carriedBlocks, setCarriedBlocks] = useState([]);
+  const [carriedCupItems, setCarriedCupItems] = useState([]);
+  const [scoredBlocks, setScoredBlocks] = useState([]);
+  const [goalStates, setGoalStates] = useState(getInitialGoalStates);
+  const [quadrantStates, setQuadrantStates] = useState(getInitialQuadrantStates);
 
   useEffect(() => {
     const resetState = startingPositions[alliance];
@@ -330,16 +335,12 @@ export default function Home() {
     setQuadrantStates(getInitialQuadrantStates());
   }, [gameMode, alliance]);
 
-  const [carriedBlocks, setCarriedBlocks] = useState([]);
-  const [carriedCupItems, setCarriedCupItems] = useState([]);
-  const [scoredBlocks, setScoredBlocks] = useState([]);
-  const [goalStates, setGoalStates] = useState(getInitialGoalStates);
-  const [quadrantStates, setQuadrantStates] = useState(getInitialQuadrantStates);
   const [clearedLoaderIds, setClearedLoaderIds] = useState([]);
   const [leftZoneCleared, setLeftZoneCleared] = useState(false);
   const [rightZoneCleared, setRightZoneCleared] = useState(false);
   const [parkedBonusEarned, setParkedBonusEarned] = useState(false);
   const [allowRotation, setAllowRotation] = useState(true);
+  const [showMobileSavedScripts, setShowMobileSavedScripts] = useState(false);
 
   const robotStateRef = useRef(robotState);
 
@@ -1563,132 +1564,150 @@ export default function Home() {
       <main className="w-full max-w-7xl grid grid-cols-1 lg:grid-cols-12 gap-6 mt-4">
 
         {/* SAVED SCRIPTS PANEL */}
-        <div className="lg:col-span-2 flex flex-col gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-xl max-h-[850px]">
-          <div className="flex items-center justify-between">
-            <h2 className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold">Saved Scripts</h2>
-          </div>
+        <div className="lg:col-span-2 flex flex-col gap-4 bg-slate-900 border border-slate-800 p-4 rounded-2xl shadow-xl lg:max-h-[850px]">
+          <button
+            type="button"
+            onClick={() => setShowMobileSavedScripts(!showMobileSavedScripts)}
+            className="w-full flex items-center justify-between text-left focus:outline-none lg:cursor-default"
+          >
+            <h2 className="text-[13px] uppercase tracking-[0.2em] text-slate-300 font-mono font-bold flex items-center gap-2">
+              <span>💾</span> Saved Scripts
+              {savedScripts.length > 0 && (
+                <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded-full font-sans font-normal">
+                  {savedScripts.length}
+                </span>
+              )}
+            </h2>
+            <span className="text-slate-400 font-mono text-xs lg:hidden bg-slate-950 border border-slate-800 px-2 py-1 rounded-lg">
+              {showMobileSavedScripts ? "▲ Hide" : "▼ Select Script"}
+            </span>
+          </button>
 
-          {/* Mode Tabs for Saved Scripts */}
-          <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950 border border-slate-800 rounded-xl">
-            <button
-              type="button"
-              onClick={() => setSavedScriptTab("push_back")}
-              className={`py-1.5 px-2 rounded-lg font-mono text-[10px] font-bold uppercase transition-all ${savedScriptTab === "push_back"
-                  ? "bg-orange-500/20 text-orange-400 border border-orange-500/40 shadow"
-                  : "text-slate-500 hover:text-slate-400"
-                }`}
-            >
-              Push Back
-            </button>
-            <button
-              type="button"
-              onClick={() => setSavedScriptTab("override")}
-              className={`py-1.5 px-2 rounded-lg font-mono text-[10px] font-bold uppercase transition-all ${savedScriptTab === "override"
-                  ? "bg-purple-500/20 text-purple-400 border border-purple-500/40 shadow"
-                  : "text-slate-500 hover:text-slate-400"
-                }`}
-            >
-              Override
-            </button>
-          </div>
+          {/* Hidden on mobile unless toggled open; always visible on lg screens */}
+          <div className={`flex flex-col gap-4 ${showMobileSavedScripts ? "flex" : "hidden lg:flex"}`}>
+            {/* Mode Tabs for Saved Scripts */}
+            <div className="grid grid-cols-2 gap-1 p-1 bg-slate-950 border border-slate-800 rounded-xl">
+              <button
+                type="button"
+                onClick={() => setSavedScriptTab("push_back")}
+                className={`py-1.5 px-2 rounded-lg font-mono text-[10px] font-bold uppercase transition-all ${savedScriptTab === "push_back"
+                    ? "bg-orange-500/20 text-orange-400 border border-orange-500/40 shadow"
+                    : "text-slate-500 hover:text-slate-400"
+                  }`}
+              >
+                Push Back
+              </button>
+              <button
+                type="button"
+                onClick={() => setSavedScriptTab("override")}
+                className={`py-1.5 px-2 rounded-lg font-mono text-[10px] font-bold uppercase transition-all ${savedScriptTab === "override"
+                    ? "bg-purple-500/20 text-purple-400 border border-purple-500/40 shadow"
+                    : "text-slate-500 hover:text-slate-400"
+                  }`}
+              >
+                Override
+              </button>
+            </div>
 
-          <div className="flex flex-col gap-2 mb-2">
-            <input
-              type="text"
-              placeholder={`Name (${savedScriptTab === "override" ? "Override" : "Push Back"})`}
-              value={saveName}
-              onChange={(e) => setSaveName(e.target.value)}
-              className="bg-slate-950 border border-slate-700 text-slate-300 font-mono text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
-            />
-            <button
-              onClick={saveScript}
-              disabled={isSaving || !saveName.trim() || !user}
-              className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-600/40 disabled:opacity-50 disabled:cursor-not-allowed py-2 rounded-lg font-mono text-xs font-bold uppercase transition-colors"
-            >
-              {isSaving ? "Saving..." : "Save Current"}
-            </button>
-            {!user && <p className="text-[10px] text-red-400 font-mono mt-1">Log in to save.</p>}
-          </div>
+            <div className="flex flex-col gap-2 mb-2">
+              <input
+                type="text"
+                placeholder={`Name (${savedScriptTab === "override" ? "Override" : "Push Back"})`}
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                className="bg-slate-950 border border-slate-700 text-slate-300 font-mono text-xs rounded-lg px-3 py-2 focus:outline-none focus:border-emerald-500"
+              />
+              <button
+                onClick={saveScript}
+                disabled={isSaving || !saveName.trim() || !user}
+                className="bg-emerald-600/20 text-emerald-400 border border-emerald-500/50 hover:bg-emerald-600/40 disabled:opacity-50 disabled:cursor-not-allowed py-2 rounded-lg font-mono text-xs font-bold uppercase transition-colors"
+              >
+                {isSaving ? "Saving..." : "Save Current"}
+              </button>
+              {!user && <p className="text-[10px] text-red-400 font-mono mt-1">Log in to save.</p>}
+            </div>
 
-          <div className="flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar">
-            {savedScripts
-              .filter((script) => (script.gameMode || "push_back") === savedScriptTab)
-              .map((script) => (
-                <div
-                  key={script.id}
-                  className={`flex flex-col border rounded-lg overflow-hidden group ${activeScript?.id === script.id ? "bg-slate-800 border-emerald-500" : "bg-slate-950 border-slate-800"}`}
-                >
-                  {editingId === script.id ? (
-                    <div className="p-3 flex items-center gap-2">
-                      <input
-                        type="text"
-                        autoFocus
-                        value={editName}
-                        onChange={(e) => setEditName(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveEdit(script.id, e);
-                          if (e.key === 'Escape') setEditingId(null);
-                        }}
-                        className="flex-1 min-w-0 bg-slate-900 border border-emerald-500 text-slate-300 font-mono text-xs rounded px-2 py-1 focus:outline-none"
-                      />
-                      <button onClick={(e) => saveEdit(script.id, e)} className="text-emerald-400 hover:text-emerald-300">
-                        ✓
-                      </button>
-                      <button onClick={() => setEditingId(null)} className="text-slate-500 hover:text-slate-400">
-                        ✕
-                      </button>
-                    </div>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        setCodeText(script.code);
-                        if (script.alliance) setAlliance(script.alliance);
-                        if (script.gameMode) {
-                          setGameMode(script.gameMode);
-                          setSavedScriptTab(script.gameMode);
-                        }
-                        if (script.robotState) {
-                          setRobotState(script.robotState);
-                          setRobotPath([script.robotState]);
-                        }
-                        setActiveScript(script);
-                      }}
-                      className="text-left p-3 hover:bg-slate-900/50 transition-colors"
-                    >
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-start gap-2">
-                          {script.alliance && (
-                            <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${script.alliance === "red" ? "bg-red-500" : "bg-blue-500"}`} />
-                          )}
-                          <p className="text-emerald-400 font-mono text-xs font-bold whitespace-pre-wrap break-words text-left" title={script.name}>{script.name}</p>
-                        </div>
-                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <span
-                            onClick={(e) => startEdit(script, e)}
-                            className="text-slate-500 hover:text-blue-400 p-1"
-                            title="Rename"
-                          >
-                            ✎
-                          </span>
-                          <span
-                            onClick={(e) => deleteScript(script.id, e)}
-                            className="text-slate-500 hover:text-red-400 p-1"
-                            title="Delete"
-                          >
-                            🗑
-                          </span>
-                        </div>
+            <div className="flex flex-col gap-2 overflow-y-auto pr-1 custom-scrollbar">
+              {savedScripts
+                .filter((script) => (script.gameMode || "push_back") === savedScriptTab)
+                .map((script) => (
+                  <div
+                    key={script.id}
+                    className={`flex flex-col border rounded-lg overflow-hidden group ${activeScript?.id === script.id ? "bg-slate-800 border-emerald-500" : "bg-slate-950 border-slate-800"}`}
+                  >
+                    {editingId === script.id ? (
+                      <div className="p-3 flex items-center gap-2">
+                        <input
+                          type="text"
+                          autoFocus
+                          value={editName}
+                          onChange={(e) => setEditName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') saveEdit(script.id, e);
+                            if (e.key === 'Escape') setEditingId(null);
+                          }}
+                          className="flex-1 min-w-0 bg-slate-900 border border-emerald-500 text-slate-300 font-mono text-xs rounded px-2 py-1 focus:outline-none"
+                        />
+                        <button onClick={(e) => saveEdit(script.id, e)} className="text-emerald-400 hover:text-emerald-300">
+                          ✓
+                        </button>
+                        <button onClick={() => setEditingId(null)} className="text-slate-500 hover:text-slate-400">
+                          ✕
+                        </button>
                       </div>
-                      <p className="text-slate-500 font-mono text-[10px] mt-1 truncate">Click to load</p>
-                    </button>
-                  )}
-                </div>
-              ))}
-            {savedScripts.filter((script) => (script.gameMode || "push_back") === savedScriptTab).length === 0 && user && (
-              <p className="text-slate-500 font-mono text-xs italic text-center mt-4">
-                No {savedScriptTab === "override" ? "Override" : "Push Back"} scripts saved yet.
-              </p>
-            )}
+                    ) : (
+                      <button
+                        onClick={() => {
+                          setCodeText(script.code);
+                          if (script.alliance) setAlliance(script.alliance);
+                          if (script.gameMode) {
+                            setGameMode(script.gameMode);
+                            setSavedScriptTab(script.gameMode);
+                          }
+                          if (script.robotState) {
+                            setRobotState(script.robotState);
+                            setRobotPath([script.robotState]);
+                          }
+                          setActiveScript(script);
+                          setShowMobileSavedScripts(false);
+                        }}
+                        className="text-left p-3 hover:bg-slate-900/50 transition-colors"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-start gap-2">
+                            {script.alliance && (
+                              <span className={`mt-1 w-2 h-2 rounded-full flex-shrink-0 ${script.alliance === "red" ? "bg-red-500" : "bg-blue-500"}`} />
+                            )}
+                            <p className="text-emerald-400 font-mono text-xs font-bold whitespace-pre-wrap break-words text-left" title={script.name}>{script.name}</p>
+                          </div>
+                          <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <span
+                              onClick={(e) => startEdit(script, e)}
+                              className="text-slate-500 hover:text-blue-400 p-1"
+                              title="Rename"
+                            >
+                              ✎
+                            </span>
+                            <span
+                              onClick={(e) => deleteScript(script.id, e)}
+                              className="text-slate-500 hover:text-red-400 p-1"
+                              title="Delete"
+                            >
+                              🗑
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-slate-500 font-mono text-[10px] mt-1 truncate">Click to load</p>
+                      </button>
+                    )}
+                  </div>
+                ))}
+              {savedScripts.filter((script) => (script.gameMode || "push_back") === savedScriptTab).length === 0 && user && (
+                <p className="text-slate-500 font-mono text-xs italic text-center mt-4">
+                  No {savedScriptTab === "override" ? "Override" : "Push Back"} scripts saved yet.
+                </p>
+              )}
+            </div>
           </div>
         </div>
 

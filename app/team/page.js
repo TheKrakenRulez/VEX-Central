@@ -137,24 +137,24 @@ export default function TeamHubPage() {
   }
 
   return (
-    <div className="min-h-[calc(100vh-73px)] p-6 md:py-8 max-w-6xl mx-auto">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
+    <div className="min-h-[calc(100vh-73px)] p-4 md:p-6 md:py-8 max-w-6xl mx-auto">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-6 gap-4">
         <div>
-          <h1 className="text-4xl font-black font-mono tracking-tight text-white uppercase">
+          <h1 className="text-3xl md:text-4xl font-black font-mono tracking-tight text-white uppercase">
             Team Workspaces
           </h1>
-          <p className="text-slate-400 mt-2">Join or create a team to start collaborating.</p>
+          <p className="text-slate-400 mt-2 text-sm md:text-base">Join or create a team to start collaborating.</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-3 sm:gap-4">
           <button 
             onClick={() => setShowJoinModal(true)}
-            className="px-6 py-2 bg-slate-800 hover:bg-slate-700 text-white font-mono font-bold rounded transition-colors"
+            className="flex-1 sm:flex-none px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-mono font-bold rounded-lg transition-colors text-sm"
           >
             Join Team
           </button>
           <button 
             onClick={() => setShowCreateModal(true)}
-            className="px-6 py-2 bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold rounded shadow-lg shadow-emerald-500/20 transition-all"
+            className="flex-1 sm:flex-none px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold rounded-lg shadow-lg shadow-emerald-500/20 transition-all text-sm"
           >
             Create Team
           </button>

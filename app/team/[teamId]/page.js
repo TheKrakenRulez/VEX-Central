@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import ChatBox from "../components/ChatBox";
 import ManageTeamModal from "../components/ManageTeamModal";
+import PinnedResources from "../components/PinnedResources";
 
 export default function TeamWorkspacePage({ params }) {
   const { teamId } = use(params);
@@ -85,47 +86,52 @@ export default function TeamWorkspacePage({ params }) {
   };
 
   return (
-    <div className="min-h-[calc(100vh-73px)] flex flex-col p-4 md:py-6 max-w-6xl mx-auto w-full">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-4">
-        <div>
-          <Link href="/team" className="text-emerald-500 font-mono text-sm hover:underline mb-2 inline-block">
-            ← Back to Teams
-          </Link>
-          <div className="flex items-center gap-4">
-            {team.teamImage && (
-              <img src={team.teamImage} alt="Team" className="w-12 h-12 rounded-xl object-cover border border-slate-700" />
+    <div className="min-h-[calc(100vh-73px)] flex flex-col p-3 md:p-4 md:py-6 max-w-6xl mx-auto w-full">
+      {/* Header */}
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div>
+            <Link href="/team" className="text-emerald-500 font-mono text-sm hover:underline mb-1 inline-block">
+              ← Back to Teams
+            </Link>
+            <div className="flex items-center gap-3">
+              {team.teamImage && (
+                <img src={team.teamImage} alt="Team" className="w-10 h-10 rounded-xl object-cover border border-slate-700" />
+              )}
+              <h1 className="text-2xl md:text-4xl font-black font-mono tracking-tight text-white uppercase flex items-center gap-3">
+                {team.name}
+              </h1>
+            </div>
+          </div>
+
+          {/* Join code + manage — wraps on mobile */}
+          <div className="flex flex-wrap items-center gap-2 bg-slate-900 border border-slate-800 rounded-lg p-1.5 shadow-lg w-fit">
+            <div className="flex items-center gap-2 pl-2">
+              <span className="text-slate-500 font-mono text-xs">Code:</span>
+              <span className="text-white font-mono font-bold tracking-widest bg-slate-950 px-2 py-1 rounded text-sm">{team.joinCode}</span>
+              <button onClick={copyJoinCode} className="text-slate-400 hover:text-white px-2 py-1 rounded transition-colors" title="Copy Code">📋</button>
+            </div>
+            <div className="w-px h-5 bg-slate-800 hidden sm:block"></div>
+            <div className="text-sm font-mono text-slate-400 px-2">
+              👥 {team.members?.length || 0}
+            </div>
+            {isAdmin && (
+              <>
+                <div className="w-px h-5 bg-slate-800"></div>
+                <button 
+                  onClick={() => setShowManageModal(true)}
+                  className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-md font-mono text-xs transition-colors flex items-center gap-1.5"
+                >
+                  ⚙️ <span className="hidden sm:inline">Manage</span>
+                </button>
+              </>
             )}
-            <h1 className="text-3xl md:text-4xl font-black font-mono tracking-tight text-white uppercase flex items-center gap-3">
-              {team.name}
-            </h1>
           </div>
-        </div>
-        <div className="flex items-center gap-4 bg-slate-900 border border-slate-800 rounded-lg p-1.5 shadow-lg">
-          <div className="flex items-center gap-2 pl-3">
-            <span className="text-slate-500 font-mono text-xs">Join Code:</span>
-            <span className="text-white font-mono font-bold tracking-widest bg-slate-950 px-2 py-1 rounded">{team.joinCode}</span>
-            <button onClick={copyJoinCode} className="text-slate-400 hover:text-white px-2 py-1 rounded transition-colors" title="Copy Code">📋</button>
-          </div>
-          <div className="w-px h-6 bg-slate-800"></div>
-          <div className="text-sm font-mono text-slate-400 px-3">
-            👥 {team.members?.length || 0}
-          </div>
-          {isAdmin && (
-            <>
-              <div className="w-px h-6 bg-slate-800"></div>
-              <button 
-                onClick={() => setShowManageModal(true)}
-                className="bg-emerald-600/20 text-emerald-400 hover:bg-emerald-600 hover:text-white px-3 py-1.5 rounded-md font-mono text-sm transition-colors flex items-center gap-2"
-              >
-                ⚙️ Manage
-              </button>
-            </>
-          )}
         </div>
       </div>
 
-      <div className="flex-1 flex gap-4 min-h-[500px]">
-        <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl">
+      <div className="flex-1 flex gap-4 min-h-0" style={{ minHeight: '400px' }}>
+        <div className="flex-1 bg-slate-900/50 border border-slate-800 rounded-2xl overflow-hidden flex flex-col shadow-2xl min-h-0">
           <ChatBox team={team} user={user} savedScripts={savedScripts} />
         </div>
         <div className="hidden lg:flex lg:w-80">

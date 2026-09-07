@@ -3,6 +3,7 @@ import { calculatePartnerScore, generateCoachComment } from "../utils/partnerSco
 
 export default function AllianceRecommendations({ myTeam, allTeams, gameMode = "push_back" }) {
   const [showScoringDetails, setShowScoringDetails] = useState(false);
+  const [expandedDesc, setExpandedDesc] = useState({});
   const isOverride = gameMode === "override";
 
   const [filters, setFilters] = useState({
@@ -115,7 +116,161 @@ export default function AllianceRecommendations({ myTeam, allTeams, gameMode = "
         </button>
       </div>
 
-      <div className={showScoringDetails ? "grid grid-cols-1 lg:grid-cols-3 gap-8" : "w-full"}>
+      {/* Scoring System Breakdown Panel (Shown directly below header when toggled) */}
+      {showScoringDetails && (
+        <div className="mb-6 bg-slate-950/60 border border-slate-800 rounded-xl p-5 font-mono text-xs shadow-xl">
+          <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 pb-2 border-b border-slate-800/80 flex items-center justify-between">
+            <span>{isOverride ? "Override Scoring System (Max 100)" : "Scoring System (Max 100)"}</span>
+            <button
+              onClick={() => setShowScoringDetails(false)}
+              className="text-slate-500 hover:text-white font-sans text-xs px-2 py-0.5 rounded bg-slate-900 border border-slate-800"
+            >
+              ✕ Close
+            </button>
+          </h3>
+          <p className="text-slate-400 mb-4 leading-relaxed">
+            Our Match Scout algorithm scores candidate teams on compatibility out of 100 points based on your team&apos;s metrics:
+          </p>
+
+          {isOverride ? (
+            /* Override Scoring Breakdown */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>1. Auton Performance</span>
+                  <span className="text-purple-400">Max 35 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Auton consistency combined with scored points</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>2. Block Scoring Speed</span>
+                  <span className="text-purple-400">Max 10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Fast (10), Average (5), Slow (2.5) block scoring</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>3. Cup Scoring Speed</span>
+                  <span className="text-purple-400">Max 10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Fast (10), Average (5), Slow (2.5) cup scoring</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>4. Flipping Capabilities</span>
+                  <span className="text-purple-400">Max 10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Block flip (5 pts) + Cup flip (5 pts)</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>5. Toggle Ability</span>
+                  <span className="text-purple-400">10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Activates strategic scoring advantages in wall zone</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>6. Drivetrain Speed</span>
+                  <span className="text-purple-400">Max 10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Fast (10 pts), Average (5 pts), Slow (2.5 pts)</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>7. Strategy Synergy</span>
+                  <span className="text-purple-400">Max 15 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Awarded for optimal strategy combination</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>8. Auton Gap-Fill</span>
+                  <span className="text-purple-400">Max 15 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Boosts Auton partners if your team lacks Auton</p>
+              </div>
+            </div>
+          ) : (
+            /* Push Back Scoring Breakdown */
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>1. Auton Performance</span>
+                  <span className="text-cyan-400">Max 35 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Auton consistency combined with scored points</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>2. Drivetrain Speed</span>
+                  <span className="text-cyan-400">Max 10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Fast (10 pts), Average (5 pts), Slow (2.5 pts)</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>3. Matchloader Intake</span>
+                  <span className="text-cyan-400">Max 10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Fast (10 pts), Med (7 pts), Slow (4 pts) clearing</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>4. De-Scoring Capability</span>
+                  <span className="text-cyan-400">10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Awarded if team can disrupt opponent scoring zones</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>5. End-Game Parking</span>
+                  <span className="text-cyan-400">Max 10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Double Parking (5 pts), Single Parking (5 pts)</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>6. Scoring Speed</span>
+                  <span className="text-cyan-400">Max 10 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Fast (10 pts), Average (5 pts), Slow (2.5 pts)</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>7. Strategy Synergy</span>
+                  <span className="text-cyan-400">Max 15 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Awarded for optimal strategy combination</p>
+              </div>
+
+              <div className="p-3 bg-slate-900/40 border border-slate-800/50 rounded-lg">
+                <div className="flex justify-between text-slate-200 font-bold mb-1">
+                  <span>8. Auton Gap-Fill</span>
+                  <span className="text-cyan-400">Max 15 pts</span>
+                </div>
+                <p className="text-slate-500 text-[11px]">Boosts Auton partners if your team lacks Auton</p>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="w-full space-y-6">
         {/* Main Recommendation Column */}
         <div className={showScoringDetails ? "lg:col-span-2 space-y-6" : "w-full space-y-6"}>
           {/* Must-Haves Filter Bar */}
@@ -187,8 +342,18 @@ export default function AllianceRecommendations({ myTeam, allTeams, gameMode = "
                     </div>
                   </div>
 
-                  {/* Right Side: Explainers & Comment */}
-                  <div className="flex-1 space-y-4">
+                  {/* Mobile Dropdown Toggle */}
+                  <button
+                    type="button"
+                    onClick={() => setExpandedDesc((prev) => ({ ...prev, [team.id]: !prev[team.id] }))}
+                    className="w-full flex items-center justify-between bg-slate-900 border border-slate-800 rounded-lg px-3.5 py-2 text-xs font-mono text-cyan-400 hover:text-cyan-300 md:hidden"
+                  >
+                    <span>📋 Why Team {team.teamNumber} is good</span>
+                    <span>{expandedDesc[team.id] ? "▲ Hide" : "▼ Read Full Analysis"}</span>
+                  </button>
+
+                  {/* Right Side: Explainers & Comment (Hidden on mobile unless expanded) */}
+                  <div className={`flex-1 space-y-4 ${expandedDesc[team.id] ? "block" : "hidden md:block"}`}>
                     <div>
                       <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 mb-1">
                         Match Scout Analysis
@@ -292,156 +457,6 @@ export default function AllianceRecommendations({ myTeam, allTeams, gameMode = "
             </div>
           )}
         </div>
-
-        {/* Scoring System Breakdown Sidebar */}
-        {showScoringDetails && (
-          <div className="space-y-6">
-            <div className="bg-slate-950/40 border border-slate-800 rounded-xl p-5 font-mono text-xs">
-              <h3 className="text-sm font-bold text-white uppercase tracking-wider mb-4 pb-2 border-b border-slate-800/80">
-                {isOverride ? "Override Scoring System (Max 100)" : "Scoring System (Max 100)"}
-              </h3>
-              <p className="text-slate-400 mb-4 leading-relaxed">
-                Our Match Scout algorithm scores other teams on compatibility out of 100 points based on your team&apos;s metrics:
-              </p>
-
-              {isOverride ? (
-                /* Override Scoring Breakdown */
-                <div className="space-y-3">
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>1. Auton Performance</span>
-                      <span className="text-purple-400">Max 35 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Auton consistency combined with scored points</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>2. Block Scoring Speed</span>
-                      <span className="text-purple-400">Max 10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Fast (10), Average (5), Slow (2.5) block scoring</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>3. Cup Scoring Speed</span>
-                      <span className="text-purple-400">Max 10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Fast (10), Average (5), Slow (2.5) cup scoring</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>4. Flipping Capabilities</span>
-                      <span className="text-purple-400">Max 10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Block flip (5 pts) + Cup flip (5 pts)</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>5. Toggle Ability</span>
-                      <span className="text-purple-400">10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Activates strategic scoring advantages in the wall zone</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>6. Drivetrain Speed</span>
-                      <span className="text-purple-400">Max 10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Fast (10 pts), Average (5 pts), Slow (2.5 pts)</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>7. Strategy Synergy</span>
-                      <span className="text-purple-400">Max 15 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Awarded for optimal strategy combination</p>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>8. Auton Gap-Fill</span>
-                      <span className="text-purple-400">Max 15 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Boosts Auton partners if your team lacks Auton</p>
-                  </div>
-                </div>
-              ) : (
-                /* Push Back Scoring Breakdown */
-                <div className="space-y-3">
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>1. Auton Performance</span>
-                      <span className="text-cyan-400">Max 35 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Auton consistency combined with scored points</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>2. Drivetrain Speed</span>
-                      <span className="text-cyan-400">Max 10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Fast (10 pts), Average (5 pts), Slow (2.5 pts)</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>3. Matchloader Intake</span>
-                      <span className="text-cyan-400">Max 10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Fast (10 pts), Med (7 pts), Slow (4 pts) matchload clearing</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>4. De-Scoring Capability</span>
-                      <span className="text-cyan-400">10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Awarded if team can disrupt opponent scoring zones</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>5. End-Game Parking</span>
-                      <span className="text-cyan-400">Max 10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Double Parking (5 pts), Single Parking (5 pts) - can stack</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>6. Scoring Speed</span>
-                      <span className="text-cyan-400">Max 10 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Fast (10 pts), Average (5 pts), Slow (2.5 pts) scoring bonus</p>
-                  </div>
-
-                  <div className="pb-2 border-b border-slate-800/50">
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>7. Strategy Synergy</span>
-                      <span className="text-cyan-400">Max 15 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Awarded for optimal strategy combination</p>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between text-slate-200 font-bold mb-1">
-                      <span>8. Auton Gap-Fill</span>
-                      <span className="text-cyan-400">Max 15 pts</span>
-                    </div>
-                    <p className="text-slate-500 text-[11px]">Boosts Auton partners if your team doesn&apos;t have Auton</p>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

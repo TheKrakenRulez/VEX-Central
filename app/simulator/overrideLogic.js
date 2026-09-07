@@ -16,10 +16,14 @@ export const overrideGoalTargets = [
 
 export const getFieldQuadrant = (x, y) => {
     // Four triangular regions split by white X lines through field center (300, 300)
+    // Top wall toggle: "topLeft" (x+y < 600 && y < x)
+    // Left wall toggle: "bottomLeft" (x+y < 600 && y >= x)
+    // Right wall toggle: "topRight" (x+y >= 600 && y < x)
+    // Bottom wall toggle: "bottomRight" (x+y >= 600 && y >= x)
     if (x + y < 600) {
-        return y < x ? "topLeft" : "topRight";
+        return y < x ? "topLeft" : "bottomLeft";
     }
-    return y < x ? "bottomRight" : "bottomLeft";
+    return y < x ? "topRight" : "bottomRight";
 };
 
 export const toggleRectangles = [

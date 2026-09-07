@@ -9,12 +9,12 @@ export default function TeamCard({ team, onEdit, onDelete }) {
             }`}>
             {/* Card Header */}
             <div
-                className="p-6 border-b border-slate-700 cursor-pointer hover:bg-slate-800/30 transition-colors"
+                className="p-4 sm:p-6 border-b border-slate-700 cursor-pointer hover:bg-slate-800/30 transition-colors"
                 onClick={() => setShowDetails(!showDetails)}
             >
-                <div className="flex justify-between items-start">
-                    <div>
-                        <div className="flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
                             <h3 className="text-xl font-bold font-mono text-white">
                                 Team {team.teamNumber}
                             </h3>
@@ -25,7 +25,7 @@ export default function TeamCard({ team, onEdit, onDelete }) {
                                 {isOverride ? "Override" : "Push Back"}
                             </span>
                         </div>
-                        <p className="text-slate-400 text-sm font-mono mt-2 flex items-center gap-3">
+                        <p className="text-slate-400 text-xs sm:text-sm font-mono mt-1.5 flex flex-wrap items-center gap-2 sm:gap-3">
                             <span>{team.primaryStrategy || "None"}</span>
                             <span className="text-slate-600">•</span>
                             <span>{team.drivetrainSpeed || "None"}</span>
@@ -35,7 +35,11 @@ export default function TeamCard({ team, onEdit, onDelete }) {
                             </span>
                         </p>
                     </div>
-                    <span className="text-slate-500">{showDetails ? "▼" : "▶"}</span>
+                    <div className="flex items-center self-start sm:self-center">
+                        <span className="text-xs font-mono text-blue-400 bg-slate-950 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm transition-colors hover:border-slate-700">
+                            {showDetails ? "▲ Hide Specs" : "▼ View Specs & Strategy"}
+                        </span>
+                    </div>
                 </div>
             </div>
 

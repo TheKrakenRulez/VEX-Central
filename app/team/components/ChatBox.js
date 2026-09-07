@@ -154,8 +154,9 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
         senderName: user.displayName || "User",
         task: {
           title: taskTitle.trim(),
-          assignedTo: assignedTo,
-          assignedToName: assignedTo === user.uid ? user.displayName : team.members?.find(m => m.uid === assignedTo)?.displayName || "Team Member",
+          assignedToName: assignedTo === user.uid 
+            ? (user.displayName || "You") 
+            : (team.memberDetails?.[assignedTo]?.name || "Team Member"),
           completed: false,
           completedBy: null,
           completedAt: null
@@ -424,10 +425,17 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
               onChange={e => setAssignedTo(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white focus:outline-none focus:border-emerald-500 text-sm"
             >
-              <option value={user.uid}>{user.displayName} (You)</option>
-              {team.members?.filter(m => m.uid !== user.uid).map(member => (
-                <option key={member.uid} value={member.uid}>{member.displayName}</option>
-              ))}
+              <option value={user.uid}>{user.displayName || "You"} (You)</option>
+              {team.members?.map((m) => {
+                const memberId = typeof m === "string" ? m : m?.uid;
+                if (!memberId || memberId === user.uid) return null;
+                const name = team.memberDetails?.[memberId]?.name || (typeof m === "object" ? m?.displayName : null) || `Member (${memberId.slice(0, 6)})`;
+                return (
+                  <option key={memberId} value={memberId}>
+                    {name}
+                  </option>
+                );
+              })}
             </select>
             <button 
               type="submit" 
@@ -481,53 +489,56 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
       )}
 
       {/* Message Input Area */}
-      <div className="p-4 bg-slate-900 border-t border-slate-800">
-        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-          
+      <div className="p-3 md:p-4 bg-slate-900 border-t border-slate-800">
+        {/* Action buttons row — always visible, wraps nicely on mobile */}
+        <div className="flex items-center gap-1 mb-2">
           <button 
             type="button"
             onClick={() => setShowPollForm(!showPollForm)}
-            className="p-2.5 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-transparent hover:border-slate-700"
+            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-transparent hover:border-slate-700 text-xs font-mono font-bold"
             title="Create Poll"
           >
-            📊
+            📊 <span className="hidden sm:inline">Poll</span>
           </button>
 
           <button 
             type="button"
             onClick={() => setShowTaskForm(!showTaskForm)}
-            className="p-2.5 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-transparent hover:border-slate-700"
+            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-transparent hover:border-slate-700 text-xs font-mono font-bold"
             title="Create Task"
           >
-            ✓
+            ✓ <span className="hidden sm:inline">Task</span>
           </button>
 
           <button 
             type="button"
             onClick={() => setShowCodeShare(!showCodeShare)}
             disabled={savedScripts.length === 0}
-            className="p-2.5 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors border border-transparent hover:border-slate-700"
+            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors border border-transparent hover:border-slate-700 text-xs font-mono font-bold"
             title="Share Code"
           >
-            💾
+            💾 <span className="hidden sm:inline">Code</span>
           </button>
 
-          <label className="p-2.5 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-700" title="Upload Image">
-            🖼️
+          <label className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-700 text-xs font-mono font-bold" title="Upload Image">
+            🖼️ <span className="hidden sm:inline">Image</span>
             <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </label>
+        </div>
 
+        {/* Text input + send row */}
+        <form onSubmit={handleSendMessage} className="flex items-center gap-2">
           <input
             type="text"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type a message to the team..."
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500"
+            placeholder="Type a message..."
+            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 text-sm min-w-0"
           />
           <button 
             type="submit"
             disabled={!newMessage.trim()}
-            className="px-6 py-2.5 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold rounded-lg transition-colors"
+            className="px-5 py-3 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex-shrink-0 text-sm"
           >
             Send
           </button>
