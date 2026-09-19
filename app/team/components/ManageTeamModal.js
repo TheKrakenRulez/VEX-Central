@@ -4,12 +4,14 @@ import { useState } from "react";
 import { db } from "@/lib/firebase";
 import { doc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useRouter } from "next/navigation";
+import CameraModal from "@/app/components/CameraModal";
 
 export default function ManageTeamModal({ team, user, onClose, onUpdate }) {
   const router = useRouter();
   const [teamName, setTeamName] = useState(team.name);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showCameraModal, setShowCameraModal] = useState(false);
 
   const handleUpdateName = async () => {
     if (!teamName.trim() || teamName === team.name) return;
@@ -147,17 +149,53 @@ export default function ManageTeamModal({ team, user, onClose, onUpdate }) {
             <h3 className="text-emerald-500 font-mono font-bold uppercase tracking-wider text-sm border-b border-slate-800 pb-2">General Settings</h3>
             
             <div className="flex flex-col md:flex-row gap-6 items-start">
-              <div className="relative group shrink-0">
+              <div className="flex flex-col items-center shrink-0 gap-2">
                 {team.teamImage ? (
                   <img src={team.teamImage} alt="Team" className="w-24 h-24 rounded-2xl object-cover border-2 border-slate-700" />
                 ) : (
                   <div className="w-24 h-24 rounded-2xl bg-slate-800 border-2 border-slate-700 flex items-center justify-center text-3xl">👥</div>
                 )}
-                <label className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl flex items-center justify-center cursor-pointer text-xs font-bold text-white uppercase tracking-wider">
-                  Change
-                  <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-                </label>
+                <div className="flex flex-col gap-1 w-full">
+                  <label className="cursor-pointer text-[11px] font-mono font-bold text-emerald-400 hover:text-emerald-300 bg-slate-950 border border-slate-800 px-2.5 py-1 rounded text-center transition-colors flex items-center justify-center gap-1">
+                    <span>📁</span> Upload
+                    <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowCameraModal(true)}
+                    className="text-[11px] font-mono font-bold text-blue-400 hover:text-blue-300 bg-slate-950 border border-slate-800 px-2.5 py-1 rounded text-center transition-colors flex items-center justify-center gap-1"
+                  >
+                    <span>📸</span> Take Photo
+                  </button>
+                </div>
               </div>
+
+              <CameraModal
+                isOpen={showCameraModal}
+                onClose={() => setShowCameraModal(false)}
+                onCapture={async (base64Data) => {
+                  const img = new Image();
+                  img.onload = async () => {
+                    const canvas = document.createElement("canvas");
+                    const MAX_WIDTH = 400;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+                    const ctx = canvas.getContext("2d");
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+
+                    try {
+                      await updateDoc(doc(db, "teams", team.id), { teamImage: compressedBase64 });
+                      onUpdate({ ...team, teamImage: compressedBase64 });
+                    } catch (err) {
+                      console.error(err);
+                      setError("Failed to upload image.");
+                    }
+                  };
+                  img.src = base64Data;
+                }}
+              />
               
               <div className="flex-1 space-y-4 w-full">
                 <div>

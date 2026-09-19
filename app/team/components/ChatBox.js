@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { db } from "@/lib/firebase";
 import { collection, query, where, orderBy, onSnapshot, addDoc, updateDoc, doc } from "firebase/firestore";
+import CameraModal from "@/app/components/CameraModal";
 
 export default function ChatBox({ team, user, savedScripts = [] }) {
   const [messages, setMessages] = useState([]);
@@ -24,7 +25,41 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
   const [showCodeShare, setShowCodeShare] = useState(false);
   const [selectedScript, setSelectedScript] = useState(null);
 
+  // Camera state
+  const [showCameraModal, setShowCameraModal] = useState(false);
+
   useEffect(() => {
+    if (!team?.id) return;
+
+    if (team.id.startsWith("guest-") || team.isGuestTeam) {
+      const loadGuestMessages = async () => {
+        const stored = localStorage.getItem("guest_messages_" + team.id);
+        if (stored) {
+          try {
+            setMessages(JSON.parse(stored));
+          } catch (e) {
+            setMessages([]);
+          }
+        } else {
+          const defaultMsg = [
+            {
+              id: "msg-1",
+              teamId: team.id,
+              senderId: "system",
+              senderName: "VEX Central Bot",
+              text: `Welcome to ${team.name || "Workspace"}! You are in guest preview mode. Note: Workspace messages will not be saved permanently unless signed in.`,
+              createdAt: new Date().toISOString()
+            }
+          ];
+          setMessages(defaultMsg);
+          localStorage.setItem("guest_messages_" + team.id, JSON.stringify(defaultMsg));
+        }
+        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      };
+      loadGuestMessages();
+      return;
+    }
+
     const q = query(
       collection(db, "team_messages"),
       where("teamId", "==", team.id),
@@ -37,16 +72,35 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
     return () => unsubscribe();
-  }, [team.id]);
+  }, [team?.id, team?.isGuestTeam, team?.name]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
+
+    const newMsgObj = {
+      id: "guest-msg-" + Date.now(),
+      teamId: team.id,
+      senderId: user?.uid || "guest-user",
+      senderName: user?.displayName || "Guest User",
+      text: newMessage.trim(),
+      createdAt: new Date().toISOString()
+    };
+
+    if (team.id.startsWith("guest-") || team.isGuestTeam) {
+      const updated = [...messages, newMsgObj];
+      setMessages(updated);
+      localStorage.setItem("guest_messages_" + team.id, JSON.stringify(updated));
+      setNewMessage("");
+      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+      return;
+    }
+
     try {
       await addDoc(collection(db, "team_messages"), {
         teamId: team.id,
-        senderId: user.uid,
-        senderName: user.displayName || "User",
+        senderId: user?.uid || "guest-user",
+        senderName: user?.displayName || "User",
         text: newMessage.trim(),
         createdAt: new Date().toISOString()
       });
@@ -75,11 +129,27 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
         // Compress to JPEG to save space
         const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
 
+        if (team.id.startsWith("guest-") || team.isGuestTeam) {
+          const imgMsg = {
+            id: "guest-img-" + Date.now(),
+            teamId: team.id,
+            senderId: user?.uid || "guest-user",
+            senderName: user?.displayName || "Guest User",
+            image: compressedBase64,
+            createdAt: new Date().toISOString()
+          };
+          const updated = [...messages, imgMsg];
+          setMessages(updated);
+          localStorage.setItem("guest_messages_" + team.id, JSON.stringify(updated));
+          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+          return;
+        }
+
         try {
           await addDoc(collection(db, "team_messages"), {
             teamId: team.id,
-            senderId: user.uid,
-            senderName: user.displayName || "User",
+            senderId: user?.uid || "guest-user",
+            senderName: user?.displayName || "User",
             image: compressedBase64,
             createdAt: new Date().toISOString()
           });
@@ -91,6 +161,50 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
       img.src = event.target.result;
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleCameraCapture = async (base64Data) => {
+    const img = new Image();
+    img.onload = async () => {
+      const canvas = document.createElement("canvas");
+      const MAX_WIDTH = 800;
+      const scaleSize = MAX_WIDTH / img.width;
+      canvas.width = MAX_WIDTH;
+      canvas.height = img.height * scaleSize;
+      const ctx = canvas.getContext("2d");
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
+
+        if (team.id.startsWith("guest-") || team.isGuestTeam) {
+          const imgMsg = {
+            id: "guest-cam-" + Date.now(),
+            teamId: team.id,
+            senderId: user?.uid || "guest-user",
+            senderName: user?.displayName || "Guest User",
+            image: compressedBase64,
+            createdAt: new Date().toISOString()
+          };
+          const updated = [...messages, imgMsg];
+          setMessages(updated);
+          localStorage.setItem("guest_messages_" + team.id, JSON.stringify(updated));
+          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+          return;
+        }
+
+        try {
+          await addDoc(collection(db, "team_messages"), {
+            teamId: team.id,
+            senderId: user?.uid || "guest-user",
+            senderName: user?.displayName || "User",
+            image: compressedBase64,
+            createdAt: new Date().toISOString()
+          });
+        } catch (err) {
+          console.error("Error sending camera photo:", err);
+          alert("Error sending photo.");
+        }
+    };
+    img.src = base64Data;
   };
 
   const handleCreatePoll = async (e) => {
@@ -520,11 +634,27 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
             💾 <span className="hidden sm:inline">Code</span>
           </button>
 
-          <label className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-700 text-xs font-mono font-bold" title="Upload Image">
+          <label className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-700 text-xs font-mono font-bold" title="Upload Image File">
             🖼️ <span className="hidden sm:inline">Image</span>
             <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
           </label>
+
+          <button
+            type="button"
+            onClick={() => setShowCameraModal(true)}
+            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-transparent hover:border-slate-700 text-xs font-mono font-bold"
+            title="Take Photo / Camera"
+          >
+            📸 <span className="hidden sm:inline">Take Photo</span>
+          </button>
         </div>
+
+        {/* Camera Modal */}
+        <CameraModal
+          isOpen={showCameraModal}
+          onClose={() => setShowCameraModal(false)}
+          onCapture={handleCameraCapture}
+        />
 
         {/* Text input + send row */}
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">

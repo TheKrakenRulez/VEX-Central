@@ -117,7 +117,7 @@ export default function LoginPage() {
               VEX <span className="text-transparent bg-clip-text bg-gradient-to-r from-red-500 to-blue-500">Central</span>
             </h1>
             <p className="text-sm text-slate-400 mt-3 font-sans leading-relaxed max-w-xs">
-              Sign in to access the Autonomous Simulator and scouting tools.
+              Sign in to access the Autonomous Simulator, team workspace, and scouting tools.
             </p>
           </div>
 

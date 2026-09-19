@@ -22,26 +22,35 @@ export default function TeamHubPage() {
 
   useEffect(() => {
     if (user === undefined) return;
-    if (!user) {
-      setLoading(false);
-      return;
-    }
 
     const fetchTeams = async () => {
+      let userTeams = [];
+      if (user && !user.isGuest) {
+        try {
+          const q = query(collection(db, "teams"), where("members", "array-contains", user.uid));
+          const snapshot = await getDocs(q);
+          snapshot.forEach((d) => {
+            userTeams.push({ id: d.id, ...d.data() });
+          });
+        } catch (err) {
+          console.error("Error fetching teams:", err);
+        }
+      }
+
+      // Load local guest teams
       try {
-        const q = query(collection(db, "teams"), where("members", "array-contains", user.uid));
-        const snapshot = await getDocs(q);
-        const userTeams = [];
-        snapshot.forEach((d) => {
-          userTeams.push({ id: d.id, ...d.data() });
-        });
+        const localGuestTeams = JSON.parse(localStorage.getItem("guest_teams") || "[]");
+        const mergedMap = new Map();
+        userTeams.forEach(t => mergedMap.set(t.id, t));
+        localGuestTeams.forEach(t => mergedMap.set(t.id, t));
+        setTeams(Array.from(mergedMap.values()));
+      } catch (e) {
         setTeams(userTeams);
-      } catch (err) {
-        console.error("Error fetching teams:", err);
       } finally {
         setLoading(false);
       }
     };
+
     fetchTeams();
   }, [user]);
 
@@ -51,11 +60,30 @@ export default function TeamHubPage() {
 
   const handleCreateTeam = async (e) => {
     e.preventDefault();
-    if (!createTeamName.trim() || !user) return;
-    if (user.isGuest) {
-      alert("Guest preview mode: teams are not saved. Sign in to create and keep team workspaces.");
+    if (!createTeamName.trim()) return;
+
+    if (!user || user.isGuest) {
+      const code = generateJoinCode();
+      const guestTeam = {
+        id: "guest-" + Date.now(),
+        name: createTeamName.trim() + " (Preview)",
+        joinCode: code,
+        members: ["guest-user"],
+        admins: ["guest-user"],
+        memberDetails: {
+          "guest-user": { name: "Guest User", photoURL: "" }
+        },
+        createdBy: "guest-user",
+        createdAt: new Date().toISOString(),
+        isGuestTeam: true
+      };
+      const existing = JSON.parse(localStorage.getItem("guest_teams") || "[]");
+      existing.push(guestTeam);
+      localStorage.setItem("guest_teams", JSON.stringify(existing));
+      router.push(`/team/${guestTeam.id}`);
       return;
     }
+
     const code = generateJoinCode();
     try {
       const docRef = await addDoc(collection(db, "teams"), {
@@ -81,9 +109,16 @@ export default function TeamHubPage() {
   const handleJoinTeam = async (e) => {
     e.preventDefault();
     setJoinError("");
-    if (!joinCode.trim() || !user) return;
-    if (user.isGuest) {
-      alert("Guest preview mode: team memberships are not saved. Sign in to join and keep teams.");
+    if (!joinCode.trim()) return;
+
+    if (!user || user.isGuest) {
+      const localGuestTeams = JSON.parse(localStorage.getItem("guest_teams") || "[]");
+      const found = localGuestTeams.find(t => t.joinCode === joinCode.trim().toUpperCase());
+      if (found) {
+        router.push(`/team/${found.id}`);
+        return;
+      }
+      setJoinError("Join code not found in preview mode. Create a new preview team or sign in!");
       return;
     }
 
@@ -127,17 +162,19 @@ export default function TeamHubPage() {
     );
   }
 
-  if (!user) {
-    return (
-      <div className="min-h-[80vh] flex flex-col items-center justify-center p-6 text-center">
-        <h1 className="text-3xl font-black font-mono text-white mb-4">Team Workspace</h1>
-        <p className="text-slate-400 mb-8 max-w-md">You need to sign in to access team workspaces, share scouting data, and collaborate.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-[calc(100vh-73px)] p-4 md:p-6 md:py-8 max-w-6xl mx-auto">
+      {(!user || user.isGuest) && (
+        <div className="mb-6 bg-amber-500/10 border border-amber-500/30 rounded-xl p-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 text-amber-300 font-mono text-xs shadow-lg">
+          <div className="flex items-center gap-2">
+            <span className="text-base">⚠️</span>
+            <span><strong>Reminder:</strong> You are in Guest Preview Mode. Workspace teams and messages will not be saved permanently unless you sign in.</span>
+          </div>
+          <Link href="/login" className="shrink-0 bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3.5 py-1.5 rounded-lg transition-colors">
+            Sign In
+          </Link>
+        </div>
+      )}
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-end mb-6 gap-4">
         <div>
           <h1 className="text-3xl md:text-4xl font-black font-mono tracking-tight text-white uppercase">
@@ -166,7 +203,7 @@ export default function TeamHubPage() {
           <div className="text-5xl mb-6">👥</div>
           <h2 className="text-2xl font-bold font-mono text-white mb-4">No Teams Yet</h2>
           <p className="text-slate-400 max-w-md mx-auto mb-8">
-            You aren't a member of any teams yet. Create a new team for your robotics club or ask your captain for a join code!
+            You aren&apos;t a member of any teams yet. Create a new team for your robotics club or ask your captain for a join code!
           </p>
         </div>
       ) : (

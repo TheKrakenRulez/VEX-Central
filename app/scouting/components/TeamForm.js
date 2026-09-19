@@ -1,4 +1,5 @@
 import { useState } from "react";
+import CameraModal from "@/app/components/CameraModal";
 
 export default function TeamForm({ initialData, onAddTeam, onCancel, gameMode = "push_back" }) {
     const [formData, setFormData] = useState(initialData || {
@@ -28,6 +29,7 @@ export default function TeamForm({ initialData, onAddTeam, onCancel, gameMode = 
 
     const [error, setError] = useState("");
     const [currentStep, setCurrentStep] = useState(1);
+    const [showCameraModal, setShowCameraModal] = useState(false);
 
     const isOverride = gameMode === "override" || initialData?.gameMode === "override";
 
@@ -108,6 +110,7 @@ export default function TeamForm({ initialData, onAddTeam, onCancel, gameMode = 
                                         onClick={() =>
                                             setFormData((prev) => ({
                                                 ...prev,
+                                                robotImage: null,
                                                 robotImagePreview: null,
                                             }))
                                         }
@@ -117,20 +120,40 @@ export default function TeamForm({ initialData, onAddTeam, onCancel, gameMode = 
                                     </button>
                                 </div>
                             ) : (
-                                <label className="cursor-pointer block">
-                                    <span className="text-slate-400 font-mono text-sm">
-                                        Click to upload or drag and drop
-                                    </span>
-                                    <input
-                                        type="file"
-                                        accept="image/*"
-                                        onChange={handleImageUpload}
-                                        className="hidden"
-                                    />
-                                </label>
+                                <div className="flex flex-col sm:flex-row items-center justify-center gap-3 py-2">
+                                    <label className="cursor-pointer px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg text-xs font-mono font-bold flex items-center gap-2 border border-slate-700 transition-colors">
+                                        <span>📁</span> Upload Photo
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageUpload}
+                                            className="hidden"
+                                        />
+                                    </label>
+
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowCameraModal(true)}
+                                        className="px-4 py-2 bg-blue-600/20 hover:bg-blue-600/40 text-blue-400 border border-blue-500/50 rounded-lg text-xs font-mono font-bold flex items-center gap-2 transition-colors"
+                                    >
+                                        <span>📸</span> Take Photo
+                                    </button>
+                                </div>
                             )}
                         </div>
                     </div>
+
+                    <CameraModal
+                        isOpen={showCameraModal}
+                        onClose={() => setShowCameraModal(false)}
+                        onCapture={(base64Data) => {
+                            setFormData((prev) => ({
+                                ...prev,
+                                robotImage: base64Data,
+                                robotImagePreview: base64Data,
+                            }));
+                        }}
+                    />
 
                     <div>
                         <label className="block text-sm font-mono text-slate-300 mb-2">

@@ -13,6 +13,11 @@ export default function PinnedResources({ teamId, user }) {
   useEffect(() => {
     if (!teamId) return;
     const fetchTeamNotes = async () => {
+      if (teamId.startsWith("guest-")) {
+        const savedNotes = localStorage.getItem("guest_pinned_notes_" + teamId);
+        setNotes(savedNotes || "");
+        return;
+      }
       try {
         const docRef = doc(db, "teams", teamId);
         const docSnap = await getDoc(docRef);
@@ -30,6 +35,11 @@ export default function PinnedResources({ teamId, user }) {
     if (!teamId) return;
     setSaving(true);
     try {
+      if (teamId.startsWith("guest-")) {
+        localStorage.setItem("guest_pinned_notes_" + teamId, notes);
+        setEditing(false);
+        return;
+      }
       const docRef = doc(db, "teams", teamId);
       await updateDoc(docRef, { pinnedNotes: notes });
       setEditing(false);

@@ -186,11 +186,11 @@ export default function Home() {
 
   useEffect(() => {
     if (user === undefined) return; // wait for auth to initialize
-    if (!user || !db || user.isGuest) {
-      setSavedScripts([]);
-      return;
-    }
     const loadScripts = async () => {
+      if (!user || !db || user.isGuest) {
+        setSavedScripts([]);
+        return;
+      }
       try {
         const q = query(
           collection(db, "scripts"),
@@ -629,12 +629,12 @@ export default function Home() {
   const scoreHalfColor = (color, quadrantState, allianceColor) => {
     if (!color) return 0;
     if (color === "yellow") {
-      // Yellow blocks only score when the quadrant toggle is set to the alliance color
-      if (quadrantState === allianceColor) return 10;
+      // Yellow blocks score 5 pts total per block (2.5 per half) when the quadrant toggle is set to the alliance color
+      if (quadrantState === allianceColor) return 2.5;
       return 0; // No points if toggle is yellow/neutral or opponent color
     }
     if (color === allianceColor) {
-      // Own color blocks always score 5, regardless of toggle
+      // Own color blocks score 5 points per own-color half
       return 5;
     }
     return 0;

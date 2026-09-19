@@ -162,23 +162,23 @@ function NavBar() {
           <Link
             href="/simulator"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
+            className="flex items-center px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 hover:text-red-400 transition-colors"
           >
-            <span className="text-red-500">⚡</span> Simulator
+            Simulator
           </Link>
           <Link
             href="/scouting"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 hover:text-blue-400 transition-colors"
+            className="flex items-center px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 hover:text-blue-400 transition-colors"
           >
-            <span className="text-blue-500">📋</span> Scouting
+            Scouting
           </Link>
           <Link
             href="/team"
             onClick={() => setMobileMenuOpen(false)}
-            className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 hover:text-emerald-400 transition-colors"
+            className="flex items-center px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 hover:text-emerald-400 transition-colors"
           >
-            <span className="text-emerald-500">👥</span> Team Workspace
+            Team Workspace
           </Link>
           {user && (
             <>
@@ -186,15 +186,15 @@ function NavBar() {
               <Link
                 href="/settings"
                 onClick={() => setMobileMenuOpen(false)}
-                className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+                className="flex items-center px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
               >
-                <span>⚙️</span> Settings
+                Settings
               </Link>
               <button
                 onClick={() => { setMobileMenuOpen(false); handleLogout(); }}
-                className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-red-400 hover:bg-slate-800 transition-colors text-left"
+                className="flex items-center px-3 py-3 rounded-lg text-sm font-mono font-bold uppercase tracking-wider text-red-400 hover:bg-slate-800 transition-colors text-left"
               >
-                <span>🚪</span> Sign Out
+                Sign Out
               </button>
             </>
           )}
