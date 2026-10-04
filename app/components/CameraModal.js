@@ -140,7 +140,7 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
                 autoPlay
                 playsInline
                 muted
-                className={`w-full h-full object-cover ${loading ? "hidden" : "block"}`}
+                className={`w-full h-full object-contain ${loading ? "hidden" : "block"}`}
               />
             </>
           )}

@@ -28,6 +28,9 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
   // Camera state
   const [showCameraModal, setShowCameraModal] = useState(false);
 
+  // Fullscreen image viewer state
+  const [fullscreenImage, setFullscreenImage] = useState(null);
+
   useEffect(() => {
     if (!team?.id) return;
 
@@ -344,7 +347,13 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
                 
                 {/* Image Message */}
                 {msg.image && (
-                  <img src={msg.image} alt="Upload" className="rounded-xl max-h-64 object-contain mt-1" />
+                  <img 
+                    src={msg.image} 
+                    alt="Upload" 
+                    onClick={() => setFullscreenImage(msg.image)}
+                    className="rounded-xl max-h-64 object-contain mt-1 cursor-pointer hover:opacity-90 transition-opacity shadow-md hover:scale-[1.01]" 
+                    title="Click to view fullscreen"
+                  />
                 )}
 
                 {/* Poll Message */}
@@ -655,6 +664,30 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
           onClose={() => setShowCameraModal(false)}
           onCapture={handleCameraCapture}
         />
+
+        {/* Fullscreen Image Lightbox Modal */}
+        {fullscreenImage && (
+          <div 
+            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer animate-fadeIn"
+            onClick={() => setFullscreenImage(null)}
+          >
+            <div className="relative max-w-full max-h-full flex flex-col items-center justify-center">
+              <button
+                onClick={() => setFullscreenImage(null)}
+                className="absolute -top-12 right-0 text-white bg-slate-800/80 hover:bg-slate-700 p-2 rounded-full text-lg w-10 h-10 flex items-center justify-center transition-colors shadow-lg border border-slate-600"
+                title="Close Fullscreen"
+              >
+                ✕
+              </button>
+              <img
+                src={fullscreenImage}
+                alt="Fullscreen View"
+                className="max-w-[95vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-slate-700/50 cursor-default"
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          </div>
+        )}
 
         {/* Text input + send row */}
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">

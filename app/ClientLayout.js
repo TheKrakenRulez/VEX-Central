@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
+import Footer from "@/app/components/Footer";
 
 function NavBar() {
   const { user, profile, logout, isGuest } = useAuth();
@@ -70,11 +71,13 @@ function NavBar() {
           <p>|</p>
 
           <Link
-          href="/team"
-          className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 hover:text-blue-400 transition-colors"
+            href="/team"
+            className="text-xs font-mono font-bold uppercase tracking-wider text-slate-400 hover:text-emerald-400 transition-colors"
           >
             Team Workspace
           </Link>
+
+
           
           {user && (
             <div className="relative flex items-center border-l border-slate-800 pl-5 ml-2" ref={dropdownRef}>
@@ -180,6 +183,7 @@ function NavBar() {
           >
             Team Workspace
           </Link>
+
           {user && (
             <>
               <div className="h-px bg-slate-800 my-1" />
@@ -244,7 +248,12 @@ function AuthGuard({ children }) {
   }
 
   if (pathname === "/login") {
-    return <>{children}</>;
+    return (
+      <div className="min-h-screen flex flex-col justify-between bg-[#0b132b]">
+        <div className="flex-1">{children}</div>
+        <Footer />
+      </div>
+    );
   }
 
   if (!user) {
@@ -252,7 +261,12 @@ function AuthGuard({ children }) {
   }
 
   if (pathname === "/onboarding") {
-    return <>{children}</>;
+    return (
+      <div className="min-h-screen flex flex-col justify-between bg-[#0b132b]">
+        <div className="flex-1">{children}</div>
+        <Footer />
+      </div>
+    );
   }
 
   if (!profile) {
@@ -261,10 +275,11 @@ function AuthGuard({ children }) {
 
   if (user && profile) {
     return (
-      <>
+      <div className="min-h-screen flex flex-col justify-between bg-[#0b132b]">
         <NavBar />
-        <div className="flex-1">{children}</div>
-      </>
+        <div className="flex-1 flex flex-col">{children}</div>
+        <Footer />
+      </div>
     );
   }
 

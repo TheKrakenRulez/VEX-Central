@@ -342,6 +342,11 @@ export default function Home() {
   const [allowRotation, setAllowRotation] = useState(true);
   const [showMobileSavedScripts, setShowMobileSavedScripts] = useState(false);
 
+  // --- TELEMETRY PLAYBACK SYSTEM ---
+  const [telemetrySnapshots, setTelemetrySnapshots] = useState([]);
+  const [playbackIndex, setPlaybackIndex] = useState(-1);
+  const isPlaybackMode = telemetrySnapshots.length > 0 && !isSimulating;
+
   const robotStateRef = useRef(robotState);
 
   const mmToPx = (mm) => (mm / 25.4) * SCALE;
@@ -1089,6 +1094,26 @@ export default function Home() {
     let currentGoalStates = { ...goalStates };
     let currentQuadrantStates = { ...quadrantStates };
     let frameHistory = [{ ...currentRobotState }];
+    const telemetryFrames = [];
+
+    const captureSnapshot = (label) => {
+      telemetryFrames.push({
+        label: label || "Frame",
+        robotState: { ...currentRobotState },
+        robotPath: [...frameHistory],
+        pickupBlocks: currentPickupBlocks.map(b => ({ ...b })),
+        carriedBlocks: currentCarriedBlocks.map(b => ({ ...b })),
+        scoredBlocks: currentScoredBlocks.map(b => ({ ...b })),
+        goalStates: JSON.parse(JSON.stringify(currentGoalStates)),
+        quadrantStates: { ...currentQuadrantStates },
+        pickupCupMarkers: currentPickupCupMarkers.map(m => ({ ...m })),
+        blockCupMarkers: currentBlockCupMarkers.map(m => ({ ...m })),
+        carriedCupItems: currentCarriedCupItems.map(c => ({ ...c })),
+      });
+    };
+
+    // Capture initial state as frame 0
+    captureSnapshot("Start Position");
 
     const refreshFrame = () => {
       setRobotState({ ...currentRobotState });
@@ -1138,6 +1163,7 @@ export default function Home() {
         }
 
         setCurrentLine("Picked up block.");
+        captureSnapshot("pickupBlock()");
         refreshFrame();
         return;
       }
@@ -1152,6 +1178,7 @@ export default function Home() {
           }
           currentCarriedCupItems = [...currentCarriedCupItems, { orientation: "gray-bottom" }];
           setCurrentLine("Picked up cup.");
+          captureSnapshot("pickupCup()");
           refreshFrame();
           return;
         }
@@ -1224,6 +1251,7 @@ export default function Home() {
           },
         };
         setCurrentLine("Placed block on goal.");
+        captureSnapshot("placeBlock()");
         refreshFrame();
         return;
       }
@@ -1266,6 +1294,7 @@ export default function Home() {
         };
         currentCarriedCupItems = currentCarriedCupItems.slice(0, -1);
         setCurrentLine("Placed cup on goal.");
+        captureSnapshot("placeCup()");
         refreshFrame();
         return;
       }
@@ -1298,6 +1327,7 @@ export default function Home() {
           };
           setCurrentLine("Flipped block on goal.");
         }
+        captureSnapshot("flipBlock()");
         refreshFrame();
         return;
       }
@@ -1328,6 +1358,7 @@ export default function Home() {
           },
         };
         setCurrentLine("Flipped cup orientation.");
+        captureSnapshot("flipCup()");
         refreshFrame();
         return;
       }
@@ -1343,6 +1374,7 @@ export default function Home() {
         const nextIndex = (cycle.indexOf(currentValue) + 1) % cycle.length;
         currentQuadrantStates = { ...currentQuadrantStates, [rectKey]: cycle[nextIndex] };
         setCurrentLine(`Toggled ${rectKey} rectangle to ${currentQuadrantStates[rectKey]}.`);
+        captureSnapshot("toggle()");
         refreshFrame();
         return;
       }
@@ -1524,7 +1556,14 @@ export default function Home() {
       setRightZoneCleared(finalRightZoneCleared);
       setParkedBonusEarned(finalParkedBonusEarned);
     }
-    setCurrentLine("Execution finished.");
+
+    // Capture final frame
+    captureSnapshot("Execution Finished");
+
+    // Store telemetry for playback
+    setTelemetrySnapshots(telemetryFrames);
+    setPlaybackIndex(telemetryFrames.length - 1);
+    setCurrentLine("Execution finished. Use ◀▶ controls to replay frame-by-frame.");
     setIsSimulating(false);
   };
 
@@ -1545,7 +1584,40 @@ export default function Home() {
     setRightZoneCleared(false);
     setParkedBonusEarned(false);
     setCodeText(originalCodeText);
+    setTelemetrySnapshots([]);
+    setPlaybackIndex(-1);
     setCurrentLine("Reset complete.");
+  };
+
+  // --- TELEMETRY PLAYBACK CONTROLS ---
+  const restoreSnapshot = (index) => {
+    if (index < 0 || index >= telemetrySnapshots.length) return;
+    const snap = telemetrySnapshots[index];
+    setPlaybackIndex(index);
+    setRobotState({ ...snap.robotState });
+    setRobotPath([...snap.robotPath]);
+    setPickupBlocks([...snap.pickupBlocks]);
+    setPickupCupMarkers([...snap.pickupCupMarkers]);
+    setBlockCupMarkers([...snap.blockCupMarkers]);
+    setCarriedBlocks([...snap.carriedBlocks]);
+    setCarriedCupItems([...snap.carriedCupItems]);
+    setScoredBlocks([...snap.scoredBlocks]);
+    setGoalStates(JSON.parse(JSON.stringify(snap.goalStates)));
+    setQuadrantStates({ ...snap.quadrantStates });
+    setCurrentLine(`Playback Frame ${index + 1}/${telemetrySnapshots.length}: ${snap.label}`);
+  };
+
+  const playbackStepBack = () => {
+    if (playbackIndex > 0) restoreSnapshot(playbackIndex - 1);
+  };
+  const playbackStepForward = () => {
+    if (playbackIndex < telemetrySnapshots.length - 1) restoreSnapshot(playbackIndex + 1);
+  };
+  const playbackRewindToStart = () => restoreSnapshot(0);
+  const playbackSkipToEnd = () => restoreSnapshot(telemetrySnapshots.length - 1);
+  const exitPlayback = () => {
+    setTelemetrySnapshots([]);
+    setPlaybackIndex(-1);
   };
 
   const blocksScored = scoredBlocks.length;
@@ -1887,10 +1959,82 @@ export default function Home() {
 
             {/* LOGGER SYSTEM */}
             <div className="bg-slate-900 border border-slate-800 px-4 py-3 rounded-xl font-mono text-xs flex gap-3 items-center shadow-md">
-              <span className={`w-2 h-2 rounded-full ${isSimulating ? (gameMode === "override" ? "bg-purple-400 animate-pulse" : "bg-orange-400 animate-pulse") : "bg-emerald-400"}`} />
-              <span className="text-slate-500 font-black tracking-wider uppercase">Console:</span>
+              <span className={`w-2 h-2 rounded-full shrink-0 ${isSimulating ? (gameMode === "override" ? "bg-purple-400 animate-pulse" : "bg-orange-400 animate-pulse") : isPlaybackMode ? "bg-cyan-400 animate-pulse" : "bg-emerald-400"}`} />
+              <span className="text-slate-500 font-black tracking-wider uppercase shrink-0">{isPlaybackMode ? "Replay:" : "Console:"}</span>
               <span className="text-slate-300 truncate">{currentLine}</span>
             </div>
+
+            {/* TELEMETRY PLAYBACK CONTROLS */}
+            {isPlaybackMode && (
+              <div className="bg-slate-900 border border-cyan-500/30 rounded-2xl p-4 shadow-lg space-y-3 animate-fadeIn">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-xs font-bold font-mono text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                    <span>🔁</span> Telemetry Playback
+                  </h3>
+                  <div className="flex items-center gap-2">
+                    <span className="text-[11px] font-mono text-slate-400 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800">
+                      Frame {playbackIndex + 1} / {telemetrySnapshots.length}
+                    </span>
+                    <button
+                      onClick={exitPlayback}
+                      className="text-[10px] font-mono font-bold text-slate-400 hover:text-red-400 bg-slate-950 px-2 py-1 rounded-lg border border-slate-800 transition-colors"
+                    >
+                      ✕ Exit
+                    </button>
+                  </div>
+                </div>
+
+                {/* Playback Slider */}
+                <input
+                  type="range"
+                  min={0}
+                  max={telemetrySnapshots.length - 1}
+                  value={playbackIndex}
+                  onChange={(e) => restoreSnapshot(parseInt(e.target.value, 10))}
+                  className="w-full h-2 bg-slate-950 rounded-full appearance-none cursor-pointer accent-cyan-500"
+                />
+
+                {/* Playback Buttons */}
+                <div className="grid grid-cols-4 gap-2">
+                  <button
+                    onClick={playbackRewindToStart}
+                    disabled={playbackIndex <= 0}
+                    className="py-2.5 bg-slate-950 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-mono text-sm font-bold transition-all"
+                  >
+                    ⏮ Start
+                  </button>
+                  <button
+                    onClick={playbackStepBack}
+                    disabled={playbackIndex <= 0}
+                    className="py-2.5 bg-slate-950 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-mono text-sm font-bold transition-all"
+                  >
+                    ◀ Back
+                  </button>
+                  <button
+                    onClick={playbackStepForward}
+                    disabled={playbackIndex >= telemetrySnapshots.length - 1}
+                    className="py-2.5 bg-slate-950 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-mono text-sm font-bold transition-all"
+                  >
+                    Fwd ▶
+                  </button>
+                  <button
+                    onClick={playbackSkipToEnd}
+                    disabled={playbackIndex >= telemetrySnapshots.length - 1}
+                    className="py-2.5 bg-slate-950 border border-slate-800 hover:border-cyan-500/50 text-slate-300 hover:text-cyan-400 disabled:opacity-30 disabled:cursor-not-allowed rounded-xl font-mono text-sm font-bold transition-all"
+                  >
+                    End ⏭
+                  </button>
+                </div>
+
+                {/* Current Frame Label */}
+                <div className="bg-slate-950 border border-slate-800 rounded-xl px-3 py-2 text-center">
+                  <span className="text-[10px] text-slate-500 font-mono uppercase tracking-wider block">Current Step</span>
+                  <span className="text-sm font-bold text-cyan-300 font-mono">
+                    {telemetrySnapshots[playbackIndex]?.label || "—"}
+                  </span>
+                </div>
+              </div>
+            )}
 
             {/* LOADER BLOCKS KEY - Push Back only */}
             {gameMode !== "override" ? (

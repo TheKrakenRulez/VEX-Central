@@ -40,8 +40,29 @@ export default function ScoutingPage() {
     useEffect(() => {
         if (user === undefined) return;
         const load = async () => {
-            if (user && db) {
+            if (user && !user.isGuest && db) {
                 try {
+                    // Migrate guest preview competitions if any
+                    const savedGuestComps = localStorage.getItem("vex_competitions");
+                    if (savedGuestComps) {
+                        try {
+                            const parsed = JSON.parse(savedGuestComps);
+                            if (Array.isArray(parsed) && parsed.length > 0) {
+                                for (const comp of parsed) {
+                                    const cleanCompName = (comp.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Competition";
+                                    await setDoc(doc(db, "competitions", comp.id), {
+                                        ...comp,
+                                        name: cleanCompName,
+                                        userId: user.uid
+                                    });
+                                }
+                                localStorage.removeItem("vex_competitions");
+                            }
+                        } catch (e) {
+                            console.error("Error migrating preview competitions:", e);
+                        }
+                    }
+
                     // Fetch user's teams
                     const tq = query(collection(db, "teams"), where("members", "array-contains", user.uid));
                     const teamSnap = await getDocs(tq);
@@ -54,12 +75,20 @@ export default function ScoutingPage() {
                     const loaded = new Map();
                     const q1 = query(collection(db, "competitions"), where("userId", "==", user.uid));
                     const snap1 = await getDocs(q1);
-                    snap1.forEach(d => loaded.set(d.id, { id: d.id, ...d.data() }));
+                    snap1.forEach(d => {
+                        const data = d.data();
+                        const cleanName = (data.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Competition";
+                        loaded.set(d.id, { id: d.id, ...data, name: cleanName });
+                    });
 
                     if (teamIds.length > 0) {
                         const q2 = query(collection(db, "competitions"), where("teamId", "in", teamIds));
                         const snap2 = await getDocs(q2);
-                        snap2.forEach(d => loaded.set(d.id, { id: d.id, ...d.data() }));
+                        snap2.forEach(d => {
+                            const data = d.data();
+                            const cleanName = (data.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Competition";
+                            loaded.set(d.id, { id: d.id, ...data, name: cleanName });
+                        });
                     }
 
                     setCompetitions(Array.from(loaded.values()));
@@ -70,7 +99,12 @@ export default function ScoutingPage() {
                 const saved = localStorage.getItem("vex_competitions");
                 if (saved) {
                     try {
-                        setCompetitions(JSON.parse(saved));
+                        const parsed = JSON.parse(saved);
+                        const cleaned = parsed.map(c => ({
+                            ...c,
+                            name: (c.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Competition"
+                        }));
+                        setCompetitions(cleaned);
                     } catch (error) {
                         console.error("Error loading competitions:", error);
                     }
@@ -89,9 +123,10 @@ export default function ScoutingPage() {
 
     const handleCreateCompetition = async (newCompetition) => {
         const id = Date.now().toString();
+        const cleanName = (newCompetition.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Competition";
         const newComp = {
             id,
-            name: newCompetition.name,
+            name: cleanName,
             date: newCompetition.date,
             gameMode: newCompetition.gameMode || "push_back",
             teamId: newCompetition.teamId || null,

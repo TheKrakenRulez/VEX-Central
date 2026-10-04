@@ -12,13 +12,14 @@ export default function TeamHubPage() {
   const router = useRouter();
   const [teams, setTeams] = useState([]);
   const [loading, setLoading] = useState(true);
-  
+
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [createTeamName, setCreateTeamName] = useState("");
-  
+
   const [showJoinModal, setShowJoinModal] = useState(false);
-  const [joinCode, setJoinCode] = useState("");
-  const [joinError, setJoinError] = useState("");
+  const generateJoinCode = () => {
+    return Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
 
   useEffect(() => {
     if (user === undefined) return;
@@ -27,22 +28,65 @@ export default function TeamHubPage() {
       let userTeams = [];
       if (user && !user.isGuest) {
         try {
+          // Migrate any preview teams created before logging in
+          const localGuestTeams = JSON.parse(localStorage.getItem("guest_teams") || "[]");
+          if (localGuestTeams.length > 0) {
+            for (const gTeam of localGuestTeams) {
+              const cleanName = (gTeam.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Team Workspace";
+              const docRef = await addDoc(collection(db, "teams"), {
+                name: cleanName,
+                joinCode: gTeam.joinCode || generateJoinCode(),
+                members: [user.uid],
+                admins: [user.uid],
+                memberDetails: {
+                  [user.uid]: {
+                    name: user.displayName || "User",
+                    photoURL: user.photoURL || ""
+                  }
+                },
+                createdBy: user.uid,
+                createdAt: gTeam.createdAt || new Date().toISOString()
+              });
+
+              // Migrate guest messages if any
+              const guestMsgs = JSON.parse(localStorage.getItem("guest_messages_" + gTeam.id) || "[]");
+              for (const msg of guestMsgs) {
+                if (msg.senderId !== "system") {
+                  await addDoc(collection(db, "team_messages"), {
+                    teamId: docRef.id,
+                    senderId: user.uid,
+                    senderName: user.displayName || "User",
+                    text: msg.text || "",
+                    createdAt: msg.createdAt || new Date().toISOString()
+                  });
+                }
+              }
+              localStorage.removeItem("guest_messages_" + gTeam.id);
+            }
+            localStorage.removeItem("guest_teams");
+          }
+
           const q = query(collection(db, "teams"), where("members", "array-contains", user.uid));
           const snapshot = await getDocs(q);
           snapshot.forEach((d) => {
-            userTeams.push({ id: d.id, ...d.data() });
+            const data = d.data();
+            const cleanName = (data.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Team Workspace";
+            userTeams.push({ id: d.id, ...data, name: cleanName });
           });
         } catch (err) {
-          console.error("Error fetching teams:", err);
+          console.error("Error fetching/syncing teams:", err);
         }
       }
 
-      // Load local guest teams
+      // Load local guest teams if guest user
       try {
         const localGuestTeams = JSON.parse(localStorage.getItem("guest_teams") || "[]");
         const mergedMap = new Map();
         userTeams.forEach(t => mergedMap.set(t.id, t));
-        localGuestTeams.forEach(t => mergedMap.set(t.id, t));
+        localGuestTeams.forEach(t => {
+          const cleanName = (t.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Team Workspace";
+          mergedMap.set(t.id, { ...t, name: cleanName });
+        });
         setTeams(Array.from(mergedMap.values()));
       } catch (e) {
         setTeams(userTeams);
@@ -54,19 +98,17 @@ export default function TeamHubPage() {
     fetchTeams();
   }, [user]);
 
-  const generateJoinCode = () => {
-    return Math.random().toString(36).substring(2, 8).toUpperCase();
-  };
-
   const handleCreateTeam = async (e) => {
     e.preventDefault();
     if (!createTeamName.trim()) return;
+
+    const cleanInputName = createTeamName.trim().replace(/\s*\(preview\)/gi, "");
 
     if (!user || user.isGuest) {
       const code = generateJoinCode();
       const guestTeam = {
         id: "guest-" + Date.now(),
-        name: createTeamName.trim() + " (Preview)",
+        name: cleanInputName,
         joinCode: code,
         members: ["guest-user"],
         admins: ["guest-user"],
@@ -87,7 +129,7 @@ export default function TeamHubPage() {
     const code = generateJoinCode();
     try {
       const docRef = await addDoc(collection(db, "teams"), {
-        name: createTeamName.trim(),
+        name: cleanInputName,
         joinCode: code,
         members: [user.uid],
         admins: [user.uid],
@@ -125,7 +167,7 @@ export default function TeamHubPage() {
     try {
       const q = query(collection(db, "teams"), where("joinCode", "==", joinCode.trim().toUpperCase()));
       const snapshot = await getDocs(q);
-      
+
       if (snapshot.empty) {
         setJoinError("Invalid join code. Please try again.");
         return;
@@ -146,7 +188,7 @@ export default function TeamHubPage() {
           photoURL: user.photoURL || ""
         }
       });
-      
+
       router.push(`/team/${teamDoc.id}`);
     } catch (err) {
       console.error("Error joining team:", err);
@@ -183,13 +225,13 @@ export default function TeamHubPage() {
           <p className="text-slate-400 mt-2 text-sm md:text-base">Join or create a team to start collaborating.</p>
         </div>
         <div className="flex gap-3 sm:gap-4">
-          <button 
+          <button
             onClick={() => setShowJoinModal(true)}
             className="flex-1 sm:flex-none px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white font-mono font-bold rounded-lg transition-colors text-sm"
           >
             Join Team
           </button>
-          <button 
+          <button
             onClick={() => setShowCreateModal(true)}
             className="flex-1 sm:flex-none px-5 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white font-mono font-bold rounded-lg shadow-lg shadow-emerald-500/20 transition-all text-sm"
           >
@@ -209,7 +251,7 @@ export default function TeamHubPage() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {teams.map((team) => (
-            <Link 
+            <Link
               key={team.id}
               href={`/team/${team.id}`}
               className="bg-slate-900 border border-slate-800 hover:border-emerald-500/50 rounded-2xl p-6 transition-all hover:bg-slate-800/50 block group"
@@ -227,7 +269,7 @@ export default function TeamHubPage() {
                   <p className="text-slate-500 text-xs mt-1">{team.members?.length || 0} Members</p>
                 </div>
               </div>
-              
+
               <div className="flex justify-between items-center text-sm font-mono mt-4 pt-4 border-t border-slate-800/50">
                 <span className="text-slate-400">Join Code: <span className="text-white font-bold">{team.joinCode}</span></span>
                 <span className="text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity">Open →</span>
@@ -256,14 +298,14 @@ export default function TeamHubPage() {
                 />
               </div>
               <div className="flex gap-4">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => setShowCreateModal(false)}
                   className="flex-1 py-2 text-slate-400 hover:bg-slate-800 rounded font-mono transition-colors"
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2 rounded font-mono transition-colors"
                 >
@@ -296,8 +338,8 @@ export default function TeamHubPage() {
                 {joinError && <p className="text-red-400 text-sm mt-2 font-mono">{joinError}</p>}
               </div>
               <div className="flex gap-4">
-                <button 
-                  type="button" 
+                <button
+                  type="button"
                   onClick={() => {
                     setShowJoinModal(false);
                     setJoinError("");
@@ -307,7 +349,7 @@ export default function TeamHubPage() {
                 >
                   Cancel
                 </button>
-                <button 
+                <button
                   type="submit"
                   className="flex-1 bg-slate-200 hover:bg-white text-slate-900 font-bold py-2 rounded font-mono transition-colors"
                 >

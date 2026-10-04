@@ -29,7 +29,8 @@ export default function TeamWorkspacePage({ params }) {
         const teams = local ? JSON.parse(local) : [];
         const found = teams.find((t) => t.id === teamId);
         if (found) {
-          setTeam(found);
+          const cleanName = (found.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Team Workspace";
+          setTeam({ ...found, name: cleanName });
         } else {
           setTeam({
             id: teamId,
@@ -50,7 +51,8 @@ export default function TeamWorkspacePage({ params }) {
         if (docSnap.exists()) {
           const data = docSnap.data();
           if (data.members.includes(user.uid)) {
-            setTeam({ id: docSnap.id, ...data });
+            const cleanName = (data.name || "").replace(/\s*\(preview\)/gi, "").trim() || "Team Workspace";
+            setTeam({ id: docSnap.id, ...data, name: cleanName });
           } else {
             router.push("/team"); // Not a member
           }
