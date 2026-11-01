@@ -24,43 +24,21 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
   // Code sharing state
   const [showCodeShare, setShowCodeShare] = useState(false);
   const [selectedScript, setSelectedScript] = useState(null);
-
-  // Camera state
   const [showCameraModal, setShowCameraModal] = useState(false);
 
-  // Fullscreen image viewer state
-  const [fullscreenImage, setFullscreenImage] = useState(null);
-
   useEffect(() => {
-    if (!team?.id) return;
-
-    if (team.id.startsWith("guest-") || team.isGuestTeam) {
-      const loadGuestMessages = async () => {
-        const stored = localStorage.getItem("guest_messages_" + team.id);
-        if (stored) {
-          try {
-            setMessages(JSON.parse(stored));
-          } catch (e) {
-            setMessages([]);
-          }
-        } else {
-          const defaultMsg = [
-            {
-              id: "msg-1",
-              teamId: team.id,
-              senderId: "system",
-              senderName: "VEX Central Bot",
-              text: `Welcome to ${team.name || "Workspace"}! You are in guest preview mode. Note: Workspace messages will not be saved permanently unless signed in.`,
-              createdAt: new Date().toISOString()
-            }
-          ];
-          setMessages(defaultMsg);
-          localStorage.setItem("guest_messages_" + team.id, JSON.stringify(defaultMsg));
+    if (user.isGuest) {
+      const loadPreviewMessages = async () => {
+        try {
+          const storedMessages = sessionStorage.getItem(`vex_guest_team_messages_${team.id}`);
+          setMessages(storedMessages ? JSON.parse(storedMessages) : []);
+        } catch (error) {
+          console.error("Error loading guest team messages:", error);
+          setMessages([]);
         }
-        setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
       };
-      loadGuestMessages();
-      return;
+      loadPreviewMessages();
+      return undefined;
     }
 
     const q = query(
@@ -75,35 +53,37 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
     return () => unsubscribe();
-  }, [team?.id, team?.isGuestTeam, team?.name]);
+  }, [team.id, user.isGuest]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim()) return;
 
-    const newMsgObj = {
-      id: "guest-msg-" + Date.now(),
-      teamId: team.id,
-      senderId: user?.uid || "guest-user",
-      senderName: user?.displayName || "Guest User",
-      text: newMessage.trim(),
-      createdAt: new Date().toISOString()
-    };
-
-    if (team.id.startsWith("guest-") || team.isGuestTeam) {
-      const updated = [...messages, newMsgObj];
-      setMessages(updated);
-      localStorage.setItem("guest_messages_" + team.id, JSON.stringify(updated));
-      setNewMessage("");
-      setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+    if (user.isGuest) {
+      try {
+        const message = {
+          id: `guest-message-${Date.now()}`,
+          teamId: team.id,
+          senderId: user.uid,
+          senderName: user.displayName || "Guest User",
+          text: newMessage.trim(),
+          createdAt: new Date().toISOString(),
+        };
+        const updatedMessages = [...messages, message];
+        sessionStorage.setItem(`vex_guest_team_messages_${team.id}`, JSON.stringify(updatedMessages));
+        setMessages(updatedMessages);
+        setNewMessage("");
+      } catch (error) {
+        console.error("Error saving guest team message:", error);
+      }
       return;
     }
 
     try {
       await addDoc(collection(db, "team_messages"), {
         teamId: team.id,
-        senderId: user?.uid || "guest-user",
-        senderName: user?.displayName || "User",
+        senderId: user.uid,
+        senderName: user.displayName || "User",
         text: newMessage.trim(),
         createdAt: new Date().toISOString()
       });
@@ -132,27 +112,11 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
         // Compress to JPEG to save space
         const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
 
-        if (team.id.startsWith("guest-") || team.isGuestTeam) {
-          const imgMsg = {
-            id: "guest-img-" + Date.now(),
-            teamId: team.id,
-            senderId: user?.uid || "guest-user",
-            senderName: user?.displayName || "Guest User",
-            image: compressedBase64,
-            createdAt: new Date().toISOString()
-          };
-          const updated = [...messages, imgMsg];
-          setMessages(updated);
-          localStorage.setItem("guest_messages_" + team.id, JSON.stringify(updated));
-          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-          return;
-        }
-
         try {
           await addDoc(collection(db, "team_messages"), {
             teamId: team.id,
-            senderId: user?.uid || "guest-user",
-            senderName: user?.displayName || "User",
+            senderId: user.uid,
+            senderName: user.displayName || "User",
             image: compressedBase64,
             createdAt: new Date().toISOString()
           });
@@ -166,48 +130,34 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
     reader.readAsDataURL(file);
   };
 
-  const handleCameraCapture = async (base64Data) => {
-    const img = new Image();
-    img.onload = async () => {
-      const canvas = document.createElement("canvas");
-      const MAX_WIDTH = 800;
-      const scaleSize = MAX_WIDTH / img.width;
-      canvas.width = MAX_WIDTH;
-      canvas.height = img.height * scaleSize;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const compressedBase64 = canvas.toDataURL("image/jpeg", 0.7);
-
-        if (team.id.startsWith("guest-") || team.isGuestTeam) {
-          const imgMsg = {
-            id: "guest-cam-" + Date.now(),
-            teamId: team.id,
-            senderId: user?.uid || "guest-user",
-            senderName: user?.displayName || "Guest User",
-            image: compressedBase64,
-            createdAt: new Date().toISOString()
-          };
-          const updated = [...messages, imgMsg];
-          setMessages(updated);
-          localStorage.setItem("guest_messages_" + team.id, JSON.stringify(updated));
-          setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
-          return;
-        }
-
-        try {
-          await addDoc(collection(db, "team_messages"), {
-            teamId: team.id,
-            senderId: user?.uid || "guest-user",
-            senderName: user?.displayName || "User",
-            image: compressedBase64,
-            createdAt: new Date().toISOString()
-          });
-        } catch (err) {
-          console.error("Error sending camera photo:", err);
-          alert("Error sending photo.");
-        }
+  const handleCameraCapture = async (image) => {
+    const message = {
+      teamId: team.id,
+      senderId: user.uid,
+      senderName: user.displayName || (user.isGuest ? "Guest User" : "User"),
+      image,
+      createdAt: new Date().toISOString(),
     };
-    img.src = base64Data;
+
+    try {
+      if (user.isGuest) {
+        const updatedMessages = [
+          ...messages,
+          { ...message, id: `guest-message-${Date.now()}` },
+        ];
+        sessionStorage.setItem(
+          `vex_guest_team_messages_${team.id}`,
+          JSON.stringify(updatedMessages)
+        );
+        setMessages(updatedMessages);
+        return;
+      }
+
+      await addDoc(collection(db, "team_messages"), message);
+    } catch (error) {
+      console.error("Error sending camera photo:", error);
+      window.alert("The photo could not be sent. It may be too large; please try another photo.");
+    }
   };
 
   const handleCreatePoll = async (e) => {
@@ -271,9 +221,8 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
         senderName: user.displayName || "User",
         task: {
           title: taskTitle.trim(),
-          assignedToName: assignedTo === user.uid 
-            ? (user.displayName || "You") 
-            : (team.memberDetails?.[assignedTo]?.name || "Team Member"),
+          assignedTo: assignedTo,
+          assignedToName: assignedTo === user.uid ? user.displayName : team.members?.find(m => m.uid === assignedTo)?.displayName || "Team Member",
           completed: false,
           completedBy: null,
           completedAt: null
@@ -323,9 +272,9 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
   };
 
   return (
-    <div className="flex flex-col h-full bg-slate-950 flex-1">
+    <div className="flex min-h-0 flex-1 flex-col bg-slate-950">
       {/* Chat Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4">
+      <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
         {messages.map((msg) => {
           const isMe = msg.senderId === user.uid;
           return (
@@ -347,13 +296,7 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
                 
                 {/* Image Message */}
                 {msg.image && (
-                  <img 
-                    src={msg.image} 
-                    alt="Upload" 
-                    onClick={() => setFullscreenImage(msg.image)}
-                    className="rounded-xl max-h-64 object-contain mt-1 cursor-pointer hover:opacity-90 transition-opacity shadow-md hover:scale-[1.01]" 
-                    title="Click to view fullscreen"
-                  />
+                  <img src={msg.image} alt="Upload" className="rounded-xl max-h-64 object-contain mt-1" />
                 )}
 
                 {/* Poll Message */}
@@ -548,17 +491,10 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
               onChange={e => setAssignedTo(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded p-2 text-white focus:outline-none focus:border-emerald-500 text-sm"
             >
-              <option value={user.uid}>{user.displayName || "You"} (You)</option>
-              {team.members?.map((m) => {
-                const memberId = typeof m === "string" ? m : m?.uid;
-                if (!memberId || memberId === user.uid) return null;
-                const name = team.memberDetails?.[memberId]?.name || (typeof m === "object" ? m?.displayName : null) || `Member (${memberId.slice(0, 6)})`;
-                return (
-                  <option key={memberId} value={memberId}>
-                    {name}
-                  </option>
-                );
-              })}
+              <option value={user.uid}>{user.displayName} (You)</option>
+              {team.members?.filter(m => m.uid !== user.uid).map(member => (
+                <option key={member.uid} value={member.uid}>{member.displayName}</option>
+              ))}
             </select>
             <button 
               type="submit" 
@@ -612,101 +548,73 @@ export default function ChatBox({ team, user, savedScripts = [] }) {
       )}
 
       {/* Message Input Area */}
-      <div className="p-3 md:p-4 bg-slate-900 border-t border-slate-800">
-        {/* Action buttons row — always visible, wraps nicely on mobile */}
-        <div className="flex items-center gap-1 mb-2">
-          <button 
-            type="button"
-            onClick={() => setShowPollForm(!showPollForm)}
-            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-transparent hover:border-slate-700 text-xs font-mono font-bold"
-            title="Create Poll"
-          >
-            📊 <span className="hidden sm:inline">Poll</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => setShowTaskForm(!showTaskForm)}
-            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-transparent hover:border-slate-700 text-xs font-mono font-bold"
-            title="Create Task"
-          >
-            ✓ <span className="hidden sm:inline">Task</span>
-          </button>
-
-          <button 
-            type="button"
-            onClick={() => setShowCodeShare(!showCodeShare)}
-            disabled={savedScripts.length === 0}
-            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors border border-transparent hover:border-slate-700 text-xs font-mono font-bold"
-            title="Share Code"
-          >
-            💾 <span className="hidden sm:inline">Code</span>
-          </button>
-
-          <label className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors cursor-pointer border border-transparent hover:border-slate-700 text-xs font-mono font-bold" title="Upload Image File">
-            🖼️ <span className="hidden sm:inline">Image</span>
-            <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
-          </label>
-
+      <div className="p-4 bg-slate-900 border-t border-slate-800">
+        <div className="mb-3 flex flex-wrap items-center gap-1" data-tour="workspace-chat-tools">
+          {!user.isGuest && (
+            <>
+              <button
+                type="button"
+                onClick={() => setShowPollForm(!showPollForm)}
+                className="rounded-lg px-2.5 py-2 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-emerald-400"
+                title="Create Poll"
+              >
+                📊 Poll
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowTaskForm(!showTaskForm)}
+                className="rounded-lg px-2.5 py-2 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-emerald-400"
+                title="Create Task"
+              >
+                ✓ Task
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowCodeShare(!showCodeShare)}
+                disabled={savedScripts.length === 0}
+                className="rounded-lg px-2.5 py-2 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-emerald-400 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Share Code"
+              >
+                💾 Code
+              </button>
+              <label className="cursor-pointer rounded-lg px-2.5 py-2 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-emerald-400" title="Upload Image">
+                🖼️ Image
+                <input type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
+              </label>
+            </>
+          )}
           <button
             type="button"
             onClick={() => setShowCameraModal(true)}
-            className="flex items-center gap-1.5 px-3 py-2 text-slate-400 hover:bg-slate-800 hover:text-emerald-400 rounded-lg transition-colors border border-transparent hover:border-slate-700 text-xs font-mono font-bold"
-            title="Take Photo / Camera"
+            className="rounded-lg px-2.5 py-2 text-xs font-mono text-slate-300 hover:bg-slate-800 hover:text-emerald-400"
+            title="Take Photo"
           >
-            📸 <span className="hidden sm:inline">Take Photo</span>
+            📸 Take Photo
           </button>
         </div>
-
-        {/* Camera Modal */}
-        <CameraModal
-          isOpen={showCameraModal}
-          onClose={() => setShowCameraModal(false)}
-          onCapture={handleCameraCapture}
-        />
-
-        {/* Fullscreen Image Lightbox Modal */}
-        {fullscreenImage && (
-          <div 
-            className="fixed inset-0 z-50 bg-black/90 backdrop-blur-md flex items-center justify-center p-4 cursor-pointer animate-fadeIn"
-            onClick={() => setFullscreenImage(null)}
-          >
-            <div className="relative max-w-full max-h-full flex flex-col items-center justify-center">
-              <button
-                onClick={() => setFullscreenImage(null)}
-                className="absolute -top-12 right-0 text-white bg-slate-800/80 hover:bg-slate-700 p-2 rounded-full text-lg w-10 h-10 flex items-center justify-center transition-colors shadow-lg border border-slate-600"
-                title="Close Fullscreen"
-              >
-                ✕
-              </button>
-              <img
-                src={fullscreenImage}
-                alt="Fullscreen View"
-                className="max-w-[95vw] max-h-[90vh] object-contain rounded-2xl shadow-2xl border border-slate-700/50 cursor-default"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Text input + send row */}
         <form onSubmit={handleSendMessage} className="flex items-center gap-2">
           <input
             type="text"
+            data-tour="workspace-chat-input"
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type a message..."
-            className="flex-1 bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-emerald-500 text-sm min-w-0"
+            className="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-white focus:outline-none focus:border-emerald-500"
           />
-          <button 
+          <button
             type="submit"
             disabled={!newMessage.trim()}
-            className="px-5 py-3 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold rounded-xl transition-colors flex-shrink-0 text-sm"
+            className="px-6 py-2.5 bg-emerald-600 disabled:opacity-50 hover:bg-emerald-500 text-white font-bold rounded-lg transition-colors"
           >
             Send
           </button>
         </form>
       </div>
+      <CameraModal
+        isOpen={showCameraModal}
+        onClose={() => setShowCameraModal(false)}
+        onCapture={handleCameraCapture}
+      />
     </div>
   );
 }

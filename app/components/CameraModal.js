@@ -2,6 +2,10 @@
 
 import { useState, useRef, useEffect } from "react";
 
+const isMobileDevice = () =>
+  /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+  (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+
 export default function CameraModal({ isOpen, onClose, onCapture }) {
   const videoRef = useRef(null);
   const streamRef = useRef(null);
@@ -26,21 +30,29 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
         streamRef.current = null;
       }
       try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error("Camera access is not supported by this browser.");
+        }
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } }
         });
-        if (active) {
-          streamRef.current = stream;
-          if (videoRef.current) {
-            videoRef.current.srcObject = stream;
-          }
-          setLoading(false);
-        } else {
+        if (!active) {
           stream.getTracks().forEach((track) => track.stop());
+          return;
         }
+        const video = videoRef.current;
+        if (!video) {
+          stream.getTracks().forEach((track) => track.stop());
+          throw new Error("Camera preview is unavailable.");
+        }
+        streamRef.current = stream;
+        video.srcObject = stream;
+        await video.play();
       } catch (err) {
         if (active) {
           console.error("Camera access error:", err);
+          streamRef.current?.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
           setCameraError("Unable to access camera directly. You can select an image file or take a photo via your browser.");
           setLoading(false);
         }
@@ -59,17 +71,33 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
   }, [isOpen, facingMode]);
 
   const takeSnap = () => {
-    if (!videoRef.current) return;
+    if (!videoRef.current) {
+      setCameraError("Camera preview is unavailable. You can select an image file instead.");
+      return;
+    }
     const video = videoRef.current;
+    if (video.readyState < HTMLMediaElement.HAVE_CURRENT_DATA || !video.videoWidth || !video.videoHeight) {
+      setCameraError("The camera frame is not ready yet. Please wait a moment or select an image file.");
+      return;
+    }
     const canvas = document.createElement("canvas");
     const MAX_WIDTH = 800;
-    const scale = Math.min(1, MAX_WIDTH / (video.videoWidth || 800));
-    canvas.width = (video.videoWidth || 800) * scale;
-    canvas.height = (video.videoHeight || 600) * scale;
+    const scale = Math.min(1, MAX_WIDTH / video.videoWidth);
+    canvas.width = video.videoWidth * scale;
+    canvas.height = video.videoHeight * scale;
     const ctx = canvas.getContext("2d");
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
-    setCapturedImage(dataUrl);
+    if (!ctx) {
+      setCameraError("Unable to capture an image from this camera. You can select an image file instead.");
+      return;
+    }
+    try {
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      const dataUrl = canvas.toDataURL("image/jpeg", 0.75);
+      setCapturedImage(dataUrl);
+    } catch (err) {
+      console.error("Camera capture error:", err);
+      setCameraError("Unable to capture an image from this camera. You can select an image file instead.");
+    }
   };
 
   const handleClose = () => {
@@ -86,6 +114,12 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
   };
 
   const toggleCamera = () => {
+    if (!isMobileDevice()) {
+      window.alert("Flipping the camera is only available on mobile devices.");
+      return;
+    }
+    setLoading(true);
+    setCameraError(null);
     setFacingMode((prev) => (prev === "environment" ? "user" : "environment"));
   };
 
@@ -140,6 +174,7 @@ export default function CameraModal({ isOpen, onClose, onCapture }) {
                 autoPlay
                 playsInline
                 muted
+                onLoadedData={() => setLoading(false)}
                 className={`w-full h-full object-contain ${loading ? "hidden" : "block"}`}
               />
             </>

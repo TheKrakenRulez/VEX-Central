@@ -1,6 +1,6 @@
 "use client";
 import { createContext, useContext, useEffect, useState } from "react";
-import { onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
+import { getAdditionalUserInfo, onAuthStateChanged, signInWithPopup, signOut } from "firebase/auth";
 import { auth, googleProvider, hasFirebaseConfig } from "@/lib/firebase";
 
 const AuthContext = createContext(null);
@@ -73,7 +73,8 @@ export function AuthProvider({ children }) {
     if (!hasFirebaseConfig) {
       throw new Error("Firebase is not configured. Please set NEXT_PUBLIC_FIREBASE_* environment variables.");
     }
-    return signInWithPopup(requireAuth(), googleProvider);
+    const credential = await signInWithPopup(requireAuth(), googleProvider);
+    return { credential, isNewUser: Boolean(getAdditionalUserInfo(credential)?.isNewUser) };
   };
 
   const enterGuestMode = () => {
@@ -101,6 +102,9 @@ export function AuthProvider({ children }) {
 
   const logout = async () => {
     if (user?.isGuest) {
+      Object.keys(sessionStorage)
+        .filter((key) => key.startsWith("vex_guest_"))
+        .forEach((key) => sessionStorage.removeItem(key));
       setUser(null);
       setProfile(null);
       return;

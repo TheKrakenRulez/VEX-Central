@@ -30,6 +30,7 @@ import { db } from "@/lib/firebase";
 export default function ScoutingPage() {
     const { user } = useAuth();
     const [competitions, setCompetitions] = useState([]);
+    const [tourCreatedCompetitionId, setTourCreatedCompetitionId] = useState(null);
     const [selectedCompetitionId, setSelectedCompetitionId] = useState(null);
     const [showForm, setShowForm] = useState(false);
     const [isLoaded, setIsLoaded] = useState(false);
@@ -96,7 +97,19 @@ export default function ScoutingPage() {
                     console.error("Error loading competitions:", err);
                 }
             } else {
-                const saved = localStorage.getItem("vex_competitions");
+                let saved;
+                if (user?.isGuest) {
+                    saved = sessionStorage.getItem("vex_guest_competitions");
+                    if (!saved) {
+                        saved = localStorage.getItem("vex_competitions");
+                        if (saved) {
+                            sessionStorage.setItem("vex_guest_competitions", saved);
+                            localStorage.removeItem("vex_competitions");
+                        }
+                    }
+                } else {
+                    saved = localStorage.getItem("vex_competitions");
+                }
                 if (saved) {
                     try {
                         const parsed = JSON.parse(saved);
@@ -115,10 +128,14 @@ export default function ScoutingPage() {
         load();
     }, [user]);
 
-    // Save competitions to localStorage for guest users
+    // Keep guest competitions for this guest session and clear them when guest mode ends.
     useEffect(() => {
-        if (!isLoaded || user) return;
-        localStorage.setItem("vex_competitions", JSON.stringify(competitions));
+        if (!isLoaded) return;
+        if (user?.isGuest) {
+            sessionStorage.setItem("vex_guest_competitions", JSON.stringify(competitions));
+        } else if (!user) {
+            localStorage.setItem("vex_competitions", JSON.stringify(competitions));
+        }
     }, [competitions, user, isLoaded]);
 
     const handleCreateCompetition = async (newCompetition) => {
@@ -132,6 +149,7 @@ export default function ScoutingPage() {
             teamId: newCompetition.teamId || null,
             teams: [],
         };
+        setTourCreatedCompetitionId(id);
         if (!newComp.teamId) delete newComp.teamId;
 
         setCompetitions([...competitions, newComp]);
@@ -143,6 +161,12 @@ export default function ScoutingPage() {
                 console.error("Error saving competition:", err);
             }
         }
+        window.dispatchEvent(new Event("vex-tour:competition-created"));
+    };
+
+    const openCompetitionForm = () => {
+        setShowForm(true);
+        window.dispatchEvent(new Event("vex-tour:competition-form-open"));
     };
 
     const handleDeleteCompetition = async (id) => {
@@ -236,8 +260,10 @@ export default function ScoutingPage() {
     if (selectedCompetition) {
         return (
             <CompetitionView
+                key={user?.isGuest ? "guest" : (user?.uid ?? "anonymous")}
                 competition={selectedCompetition}
                 onBack={() => setSelectedCompetitionId(null)}
+                isGuest={Boolean(user?.isGuest)}
                 userTeams={userTeams}
                 onUpdateTeams={(teams) =>
                     handleUpdateTeams(selectedCompetitionId, teams)
@@ -278,7 +304,8 @@ export default function ScoutingPage() {
                     <>
                         {/* Create Button */}
                         <button
-                            onClick={() => setShowForm(true)}
+                            onClick={openCompetitionForm}
+                            data-tour="scouting-new-competition"
                             className="mb-8 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition-colors shadow-lg"
                         >
                             + New Competition
@@ -291,7 +318,7 @@ export default function ScoutingPage() {
                                     No competitions yet
                                 </p>
                                 <button
-                                    onClick={() => setShowForm(true)}
+                                    onClick={openCompetitionForm}
                                     className="text-blue-400 hover:text-blue-300 text-sm font-mono transition-colors"
                                 >
                                     Create your first competition →
@@ -302,8 +329,12 @@ export default function ScoutingPage() {
                                 {competitions.map((competition) => (
                                     <div
                                         key={competition.id}
+                                        data-tour={competition.id === tourCreatedCompetitionId ? "scouting-created-competition" : undefined}
                                         className="bg-slate-900/50 border border-slate-800 hover:border-blue-500/50 rounded-lg p-6 transition-all hover:shadow-lg cursor-pointer group"
-                                        onClick={() => setSelectedCompetitionId(competition.id)}
+                                        onClick={() => {
+                                            setSelectedCompetitionId(competition.id);
+                                            window.dispatchEvent(new Event("vex-tour:competition-opened"));
+                                        }}
                                     >
                                         <div className="flex justify-between items-start mb-4">
                                             <div>

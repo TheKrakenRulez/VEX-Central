@@ -45,8 +45,14 @@ export default function CompetitionForm({ onCreateCompetition, userTeams = [] })
                     </label>
                     <input
                         type="text"
+                        data-tour="competition-name"
                         value={name}
-                        onChange={(e) => setName(e.target.value)}
+                        onChange={(e) => {
+                            setName(e.target.value);
+                            if (e.target.value.trim()) {
+                                window.dispatchEvent(new Event("vex-tour:competition-name-entered"));
+                            }
+                        }}
                         placeholder="e.g., State Championship"
                         className="w-full bg-slate-800 border border-slate-700 rounded px-4 py-2 text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-colors"
                     />
@@ -58,8 +64,14 @@ export default function CompetitionForm({ onCreateCompetition, userTeams = [] })
                     </label>
                     <input
                         type="date"
+                        data-tour="competition-date"
                         value={date}
-                        onChange={(e) => setDate(e.target.value)}
+                        onChange={(e) => {
+                            setDate(e.target.value);
+                            if (e.target.value) {
+                                window.dispatchEvent(new Event("vex-tour:competition-date-entered"));
+                            }
+                        }}
                         className="w-full bg-slate-800 border border-slate-700 rounded px-4 py-2 text-white focus:outline-none focus:border-blue-500 transition-colors"
                     />
                 </div>
@@ -69,8 +81,12 @@ export default function CompetitionForm({ onCreateCompetition, userTeams = [] })
                         Game / Season
                     </label>
                     <select
+                        data-tour="competition-season"
                         value={gameMode}
-                        onChange={(e) => setGameMode(e.target.value)}
+                        onChange={(e) => {
+                            setGameMode(e.target.value);
+                            window.dispatchEvent(new Event("vex-tour:competition-season-selected"));
+                        }}
                         className="w-full bg-slate-800 border border-slate-700 rounded px-4 py-2 text-white font-mono focus:outline-none focus:border-blue-500 transition-colors"
                     >
                         <option value="push_back">25-26 Push Back</option>
@@ -104,6 +120,7 @@ export default function CompetitionForm({ onCreateCompetition, userTeams = [] })
 
                 <button
                     type="submit"
+                    data-tour="competition-submit"
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 rounded transition-colors mt-6"
                 >
                     Create Competition

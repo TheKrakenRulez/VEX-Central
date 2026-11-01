@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import TeamForm from "./TeamForm";
 import TeamCard from "./TeamCard";
 import MyTeamForm from "./MyTeamForm";
@@ -25,24 +25,59 @@ const formatCompetitionDate = (value) => {
     });
 };
 
-export default function CompetitionView({ competition, onBack, onUpdateTeams, userTeams = [], onUpdateSharing }) {
+const getTourExampleTeam = (gameMode) => ({
+    id: "tour-example-team",
+    teamNumber: "9000X",
+    teamName: "Example Team",
+    isTourExample: true,
+    gameMode,
+    drivetrainSpeed: "fast",
+    hasAuton: "yes",
+    autonConsistency: "85",
+    autonPoints: "20",
+    primaryStrategy: "balanced",
+    scoringSpeed: "fast",
+    deScoring: "yes",
+    singleParking: "yes",
+    doubleParking: "no",
+    hasMatchloaderIntake: "yes",
+    matchloaderSpeed: "fast",
+    blockScoringSpeed: "fast",
+    cupScoringSpeed: "average",
+    canFlipBlocks: "yes",
+    canFlipCups: "yes",
+    hasToggleAbility: "yes",
+});
+
+export default function CompetitionView({ competition, onBack, onUpdateTeams, userTeams = [], onUpdateSharing, isGuest = false }) {
     const [showTeamForm, setShowTeamForm] = useState(false);
     const [showMyTeamForm, setShowMyTeamForm] = useState(false);
     const [editingTeam, setEditingTeam] = useState(null);
+    const [showTourExample, setShowTourExample] = useState(false);
 
-    const initialUserTeam = (() => {
+    useEffect(() => {
+        const showExample = () => setShowTourExample(true);
+        const hideExample = () => setShowTourExample(false);
+        window.addEventListener("vex-tour:show-example-team", showExample);
+        window.addEventListener("vex-tour:hide-example-team", hideExample);
+        return () => {
+            window.removeEventListener("vex-tour:show-example-team", showExample);
+            window.removeEventListener("vex-tour:hide-example-team", hideExample);
+        };
+    }, []);
+
+    const [userTeam, setUserTeam] = useState(() => {
         if (typeof window === "undefined") return null;
-
         try {
-            const savedTeam = localStorage.getItem("scouting_my_team");
+            const storage = isGuest ? sessionStorage : localStorage;
+            const key = isGuest ? "vex_guest_scouting_my_team" : "scouting_my_team";
+            const savedTeam = storage.getItem(key);
             return savedTeam ? JSON.parse(savedTeam) : null;
         } catch (e) {
             console.error("Failed to parse saved user team:", e);
             return null;
         }
-    })();
-
-    const [userTeam, setUserTeam] = useState(initialUserTeam);
+    });
 
     // Save "My Team" to localStorage when it updates
     const handleSaveMyTeam = (teamData) => {
@@ -51,14 +86,24 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
             gameMode: teamData.gameMode || competition.gameMode || "push_back",
         };
         setUserTeam(nextTeamData);
-        localStorage.setItem("scouting_my_team", JSON.stringify(nextTeamData));
+        const storage = isGuest ? sessionStorage : localStorage;
+        const key = isGuest ? "vex_guest_scouting_my_team" : "scouting_my_team";
+        storage.setItem(key, JSON.stringify(nextTeamData));
         setShowMyTeamForm(false);
+        window.dispatchEvent(new Event("vex-tour:my-team-saved"));
+    };
+
+    const openMyTeamForm = () => {
+        setShowMyTeamForm(true);
+        window.dispatchEvent(new Event("vex-tour:my-team-form-open"));
     };
 
     const handleClearMyTeam = () => {
         if (confirm("Are you sure you want to clear your team's stats?")) {
             setUserTeam(null);
-            localStorage.removeItem("scouting_my_team");
+            const storage = isGuest ? sessionStorage : localStorage;
+            const key = isGuest ? "vex_guest_scouting_my_team" : "scouting_my_team";
+            storage.removeItem(key);
         }
     };
 
@@ -168,7 +213,8 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
                                 + Scout New Team
                             </button>
                             <button
-                                onClick={() => setShowMyTeamForm(true)}
+                                onClick={openMyTeamForm}
+                                data-tour="scouting-add-my-team"
                                 className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-lg"
                             >
                                 {userTeam ? "✎ Edit My Team" : "+ Add My Team"}
@@ -212,7 +258,8 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
                                     We cannot rank opponent teams or check alliance compatibility until you define your own team&apos;s stats.
                                 </p>
                                 <button
-                                    onClick={() => setShowMyTeamForm(true)}
+                                    onClick={openMyTeamForm}
+                                    data-tour="scouting-add-my-team"
                                     className="px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors shadow-lg font-mono text-sm"
                                 >
                                     + Set My Team Stats to Compare
@@ -221,12 +268,15 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
                         )}
 
                         {/* Alliance Recommendations (shows up when there is at least one scouted team that's not users) */}
-                        {userTeam && competition.teams.length > 0 && (
+                        {userTeam && (competition.teams.length > 0 || showTourExample) && (
                             <div className="mb-12">
                                 <AllianceRecommendations
                                     myTeam={userTeam}
-                                    allTeams={competition.teams}
+                                    allTeams={showTourExample
+                                        ? [...competition.teams, getTourExampleTeam(competition.gameMode || "push_back")]
+                                        : competition.teams}
                                     gameMode={competition.gameMode || "push_back"}
+                                    showTourExample={showTourExample}
                                 />
                             </div>
                         )}
@@ -267,4 +317,3 @@ export default function CompetitionView({ competition, onBack, onUpdateTeams, us
         </div>
     );
 }
-

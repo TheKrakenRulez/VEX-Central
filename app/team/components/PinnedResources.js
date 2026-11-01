@@ -5,7 +5,7 @@ import { db } from "@/lib/firebase";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import Link from "next/link";
 
-export default function PinnedResources({ teamId, user }) {
+export default function PinnedResources({ teamId, user, onClose }) {
   const [notes, setNotes] = useState("");
   const [editing, setEditing] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -14,7 +14,7 @@ export default function PinnedResources({ teamId, user }) {
     if (!teamId) return;
     const fetchTeamNotes = async () => {
       if (teamId.startsWith("guest-")) {
-        const savedNotes = localStorage.getItem("guest_pinned_notes_" + teamId);
+        const savedNotes = sessionStorage.getItem("vex_guest_pinned_notes_" + teamId);
         setNotes(savedNotes || "");
         return;
       }
@@ -36,7 +36,7 @@ export default function PinnedResources({ teamId, user }) {
     setSaving(true);
     try {
       if (teamId.startsWith("guest-")) {
-        localStorage.setItem("guest_pinned_notes_" + teamId, notes);
+        sessionStorage.setItem("vex_guest_pinned_notes_" + teamId, notes);
         setEditing(false);
         return;
       }
@@ -51,12 +51,22 @@ export default function PinnedResources({ teamId, user }) {
   };
 
   return (
-    <div className="w-full bg-slate-900/50 border border-slate-800 rounded-2xl p-4 flex flex-col gap-4 overflow-y-auto shadow-2xl">
+    <div className="flex w-full flex-col gap-4 rounded-2xl border border-slate-800 bg-slate-900/50 p-4 shadow-2xl">
       {/* Header */}
       <div className="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 className="text-sm font-bold font-mono text-slate-200 uppercase tracking-wider flex items-center gap-2">
           📌 Pinned Resources
         </h3>
+        {onClose && (
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label="Close pinned resources"
+            className="rounded px-2 py-1 text-slate-400 hover:bg-slate-800 hover:text-white"
+          >
+            ✕
+          </button>
+        )}
       </div>
 
       {/* Quick Launch Simulator */}

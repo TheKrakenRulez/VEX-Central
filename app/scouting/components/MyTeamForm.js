@@ -66,7 +66,7 @@ export default function MyTeamForm({ initialData, onSave, onCancel, gameMode = "
   // Step 1: Basic Info
   if (currentStep === 1) {
     return (
-      <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
+      <div data-tour="scouting-my-team-form" className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
         <h2 className="text-2xl font-bold font-mono text-white mb-6">
           Set My Team - Basic Info
         </h2>
@@ -79,6 +79,7 @@ export default function MyTeamForm({ initialData, onSave, onCancel, gameMode = "
             <input
               type="text"
               name="teamNumber"
+              data-tour="scouting-my-team-number"
               value={formData.teamNumber}
               onChange={handleInputChange}
               placeholder="e.g., 3197A"
@@ -198,7 +199,7 @@ export default function MyTeamForm({ initialData, onSave, onCancel, gameMode = "
   // Step 2: Autonomy
   if (currentStep === 2) {
     return (
-      <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
+      <div data-tour="scouting-my-team-form" className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
         <h2 className="text-2xl font-bold font-mono text-white mb-6">
           Set My Team - Auton
         </h2>
@@ -289,7 +290,7 @@ export default function MyTeamForm({ initialData, onSave, onCancel, gameMode = "
   // Step 3: Game-specific capabilities
   if (currentStep === 3) {
     return (
-      <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
+      <div data-tour="scouting-my-team-form" className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold font-mono text-white">
             Set My Team - Game Skills
@@ -485,7 +486,7 @@ export default function MyTeamForm({ initialData, onSave, onCancel, gameMode = "
   // Step 4: Strategy
   if (currentStep === 4) {
     return (
-      <div className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
+      <div data-tour="scouting-my-team-form" className="bg-slate-900/50 border border-slate-800 rounded-lg p-8 max-w-2xl">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-bold font-mono text-white">
             Set My Team - Strategy

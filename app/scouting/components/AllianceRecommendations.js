@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { calculatePartnerScore, generateCoachComment } from "../utils/partnerScore";
 
-export default function AllianceRecommendations({ myTeam, allTeams, gameMode = "push_back" }) {
+export default function AllianceRecommendations({ myTeam, allTeams, gameMode = "push_back", showTourExample = false }) {
   const [showScoringDetails, setShowScoringDetails] = useState(false);
   const [expandedDesc, setExpandedDesc] = useState({});
   const isOverride = gameMode === "override";
@@ -91,7 +91,7 @@ export default function AllianceRecommendations({ myTeam, allTeams, gameMode = "
       <div className="border-b border-slate-800 pb-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-2xl font-black font-mono tracking-tight text-white uppercase">
+            <h2 data-tour={showTourExample ? "match-scout-title" : undefined} className="text-2xl font-black font-mono tracking-tight text-white uppercase">
               Alliance Partner Match Scout
             </h2>
             <span className={`px-2 py-1 text-[10px] font-mono font-bold rounded uppercase tracking-wider ${isOverride
@@ -314,6 +314,7 @@ export default function AllianceRecommendations({ myTeam, allTeams, gameMode = "
               {topRecommendations.map(({ team, score, coachComment }, index) => (
                 <div
                   key={team.id}
+                  data-tour={team.isTourExample ? "match-scout-example" : undefined}
                   className={`relative overflow-hidden border rounded-xl bg-slate-950/40 p-5 transition-all flex flex-col md:flex-row gap-6 items-start ${isOverride
                       ? "border-slate-800 hover:border-purple-500/30"
                       : "border-slate-800 hover:border-blue-500/30"
@@ -461,5 +462,3 @@ export default function AllianceRecommendations({ myTeam, allTeams, gameMode = "
     </div>
   );
 }
-
-
